@@ -6,10 +6,18 @@
     <item
         android:id="@+id/action_search_kl"
         android:icon="@android:drawable/ic_menu_search"
-        android:orderInCategory="4"
+        android:orderInCategory="1"
         android:title="@string/action_search_knowledge"
         app:actionViewClass="android.support.v7.widget.SearchView"
         app:showAsAction="always" />
+
+    <item
+        android:id="@+id/menu_checkbox1"
+        android:title="checkbox"
+        android:icon="@android:drawable/ic_menu_more"
+        android:orderInCategory="2"
+        app:showAsAction="always" />
+
 
 
 

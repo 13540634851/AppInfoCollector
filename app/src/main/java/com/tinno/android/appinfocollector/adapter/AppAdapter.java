@@ -61,6 +61,15 @@ class AppHolder extends RecyclerView.ViewHolder {
         mPkgName = itemView.findViewById(R.id.list_item_package_name);
         mAppDir = itemView.findViewById(R.id.list_item_package_dir);
         mAppVer = itemView.findViewById(R.id.list_item_package_version);
+
+
+        itemView.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+
+                return true;
+            }
+        });
     }
 
     public void bindCrime(AppInfo appinfo) {

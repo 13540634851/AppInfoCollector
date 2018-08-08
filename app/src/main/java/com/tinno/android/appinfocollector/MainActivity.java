@@ -1,6 +1,7 @@
 package com.tinno.android.appinfocollector;
 
 import android.app.ProgressDialog;
+import android.graphics.drawable.ColorDrawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -10,7 +11,13 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
+import android.widget.CheckBox;
+import android.widget.LinearLayout;
+import android.widget.PopupWindow;
 import android.widget.ProgressBar;
 
 import com.tinno.android.appinfocollector.adapter.AppAdapter;
@@ -28,6 +35,8 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     private boolean isScrollToTop = true;
     private ProgressDialog progressDialog;
     private Toolbar toolbar;
+    private PopupWindow popupWindow;
+    private View popupWindowView;
     AsyncTask<String, Integer, Boolean> appTask = new AsyncTask<String, Integer, Boolean>() {
         private List<AppInfo> appInfos;
 
@@ -60,6 +69,37 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             hideProgressDialog();
         }
     };
+
+
+    public void showAsPopWindow() {
+        if (popupWindow == null || popupWindowView == null) {
+            popupWindowView = LayoutInflater.from(this).inflate(R.layout.popwindow, null);
+            popupWindow = new PopupWindow(popupWindowView,
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT, true);
+            popupWindow.setTouchable(true);
+            popupWindow.setBackgroundDrawable(new ColorDrawable());
+            popupWindow.setAnimationStyle(R.style.PopupAnimation);
+        }
+        popupWindow.showAtLocation(popupWindowView, Gravity.TOP | Gravity.END,0,toolbar.getMeasuredHeight());
+        popupWindow.showAsDropDown(popupWindowView);
+
+    }
+
+    private int getStatusBarHeight( ) {
+        int result = 0;
+        int resourceId = getResources().getIdentifier("status_bar_height", "dimen", "android");
+        if (resourceId > 0) {
+            result = getResources().getDimensionPixelSize(resourceId);
+        }
+        return result;
+    }
+
+    private void hidePopWindow() {
+        if (popupWindow == null) {
+            return;
+        }
+        popupWindow.dismiss();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -121,6 +161,19 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             }
         });
 
+        toolbar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                if (popupWindow == null || !popupWindow.isShowing()) {
+                    showAsPopWindow();
+                } else if (popupWindow.isShowing()) {
+                    hidePopWindow();
+                }
+
+                return true;
+            }
+        });
+
         appTask.execute();
     }
 
@@ -159,6 +212,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         }
         return true;
     }
+
 
     @Override
     protected void onDestroy() {
