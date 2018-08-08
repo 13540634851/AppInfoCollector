@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">AppInfoCollector</string>
+    <string name="app_search">App Search</string>
+    <string name="action_search_knowledge">AppInfoCollector</string>
+</resources>
