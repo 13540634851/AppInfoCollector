@@ -1,4 +1,4 @@
-package com.tinno.android.appinfocollector;
+package com.tinno.android.appinfocollector.tools;
 
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
@@ -25,30 +25,30 @@ public class ApplicationInfoUtil {
     public static final int SYSTEM_APP = DEFAULT + 1; // 系统应用
     public static final int NONSYSTEM_APP = DEFAULT + 2; // 非系统应用
 
+    private static ApplicationInfoUtil intance;
+    private Context context;
+    private List<AppInfo> sysApplist, nonsysApplist;
 
-    public static String getProgramNameByPackageName(Context context,
-                                                     String packageName) {
-        PackageManager pm = context.getPackageManager();
-        String name = null;
-        try {
-            name = pm.getApplicationLabel(
-                    pm.getApplicationInfo(packageName,
-                            PackageManager.GET_META_DATA)).toString();
-        } catch (Exception e) {
-            e.printStackTrace();
+    public static ApplicationInfoUtil getIntance(Context context) {
+        if (intance == null) {
+            synchronized (ApplicationInfoUtil.class) {
+                intance = new ApplicationInfoUtil(context.getApplicationContext());
+            }
         }
-        return name;
+        return intance;
     }
 
-
-    public static void getAllProgramInfo(List<AppInfo> allApplist,
-                                         Context context) {
-        getAllProgramInfo(allApplist, context, DEFAULT);
+    private ApplicationInfoUtil(Context context) {
+        this.context = context;
+        sysApplist = new ArrayList<>();
+        nonsysApplist = new ArrayList<>();
     }
 
-    public static void getAllProgramInfo(List<AppInfo> applist,
-                                         Context context, int type) {
-        ArrayList<AppInfo> appList = new ArrayList<AppInfo>(); // 用来存储获取的应用信息数据
+    public void sync() {
+
+        sysApplist.clear();
+        nonsysApplist.clear();
+
         List<PackageInfo> packages = context.getPackageManager()
                 .getInstalledPackages(0);
 
@@ -64,38 +64,48 @@ public class ApplicationInfoUtil {
             tmpInfo.setVersionCode(packageInfo.versionCode);
             tmpInfo.setAppIcon(packageInfo.applicationInfo.loadIcon(context
                     .getPackageManager()));
-            switch (type) {
-                case NONSYSTEM_APP:
-                    if (!isSystemAPP(packageInfo)) {
-                        applist.add(tmpInfo);
-                    }
-                    break;
-                case SYSTEM_APP:
-                    if (isSystemAPP(packageInfo)) {
-                        applist.add(tmpInfo);
-                    }
-                    break;
-                default:
-                    applist.add(tmpInfo);
-                    break;
+
+            if (isSystemAPP(packageInfo)) {
+                sysApplist.add(tmpInfo);
+            } else {
+                nonsysApplist.add(tmpInfo);
             }
-
         }
+
     }
 
-    public static List<AppInfo> getAllSystemProgramInfo(Context context) {
-        List<AppInfo> systemAppList = new ArrayList<AppInfo>();
-        getAllProgramInfo(systemAppList, context, SYSTEM_APP);
-        return systemAppList;
+    public String getAppNameByPackageName(String packageName) {
+        PackageManager pm = context.getPackageManager();
+        String name = null;
+        try {
+            name = pm.getApplicationLabel(
+                    pm.getApplicationInfo(packageName,
+                            PackageManager.GET_META_DATA)).toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return name;
     }
 
-    public static List<AppInfo> getAllNonsystemProgramInfo(Context context) {
-        List<AppInfo> nonsystemAppList = new ArrayList<AppInfo>();
-        getAllProgramInfo(nonsystemAppList, context, NONSYSTEM_APP);
-        return nonsystemAppList;
+
+    public List<AppInfo> getAppInfo(int type) {
+        List<AppInfo> rtrAppInfos = new ArrayList<>();
+        switch (type) {
+            case SYSTEM_APP:
+                rtrAppInfos.addAll(sysApplist);
+                break;
+            case NONSYSTEM_APP:
+                rtrAppInfos.addAll(nonsysApplist);
+                break;
+            case DEFAULT:
+                rtrAppInfos.addAll(sysApplist);
+                rtrAppInfos.addAll(nonsysApplist);
+                break;
+        }
+        return rtrAppInfos;
     }
 
-    public static Boolean isSystemAPP(PackageInfo packageInfo) {
+    public Boolean isSystemAPP(PackageInfo packageInfo) {
         if ((packageInfo.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) == 0) { // 非系统应用
             return false;
         } else { // 系统应用
@@ -103,9 +113,8 @@ public class ApplicationInfoUtil {
         }
     }
 
-    public static void search(List<AppInfo> allApplist, final String k) {
-        Log.i("wangcan", "k=" + k);
-        if(allApplist.size()==0){
+    public void search(List<AppInfo> allApplist, final String k) {
+        if (allApplist.size() == 0) {
             return;
         }
         String key = (k == null) ? null : k.trim();
@@ -124,11 +133,14 @@ public class ApplicationInfoUtil {
         Collections.sort(allApplist, new Comparator<AppInfo>() {
             @Override
             public int compare(AppInfo o1, AppInfo o2) {
+                o2.cleanHight();
+                o1.cleanHight();
                 boolean o1ok = isAppinfoContainKey(o1, k);
                 boolean o2ok = isAppinfoContainKey(o2, k);
+
+
                 if (o1ok == o2ok) {
-                    o1.cleanHight();
-                    o2.cleanHight();
+
                     return o1.getAppName().toString().compareToIgnoreCase(o2.getAppName().toString());
                 } else {
                     return o1ok ? -1 : 1;
@@ -138,7 +150,7 @@ public class ApplicationInfoUtil {
 
     }
 
-    private static boolean isAppinfoContainKey(AppInfo info, String onekey) {
+    private  boolean isAppinfoContainKey(AppInfo info, String onekey) {
         boolean isContainKey = false;
         String key = onekey.toLowerCase();
         if (info.getAppDir().toString().toLowerCase().contains(key)) {
@@ -158,7 +170,7 @@ public class ApplicationInfoUtil {
 
     }
 
-    public static SpannableString highlight(String text, String target) {
+    public  SpannableString highlight(String text, String target) {
         return highlight(text, target, Color.RED);
     }
 

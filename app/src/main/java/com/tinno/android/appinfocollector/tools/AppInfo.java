@@ -1,4 +1,4 @@
-package com.tinno.android.appinfocollector;
+package com.tinno.android.appinfocollector.tools;
 
 import android.graphics.drawable.Drawable;
 

@@ -8,7 +8,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.tinno.android.appinfocollector.AppInfo;
+import com.tinno.android.appinfocollector.tools.AppInfo;
 import com.tinno.android.appinfocollector.R;
 
 import java.util.List;
@@ -76,8 +76,8 @@ class AppHolder extends RecyclerView.ViewHolder {
         mAppInfo = appinfo;
         mAppIcon.setImageDrawable(mAppInfo.getAppIcon());
         mAppName.setText(mAppInfo.getAppName());
-        mPkgName.setText("package name: " + mAppInfo.getPackageName());
-        mAppDir.setText("app dir: " + mAppInfo.getAppDir());
+        mPkgName.setText(mAppInfo.getPackageName());
+        mAppDir.setText(mAppInfo.getAppDir());
         mAppVer.setText(mAppInfo.getVersionName() + "[" + mAppInfo.getVersionCode() + "]");
     }
 

@@ -13,7 +13,7 @@
         android:text="显示系统app" />
 
     <CheckBox
-        android:id="@+id/show_sys_pri"
+        android:id="@+id/show_uninstall"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="显示可卸载" />

@@ -1,5 +1,6 @@
 package com.tinno.android.appinfocollector;
 
+import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.graphics.drawable.ColorDrawable;
 import android.os.AsyncTask;
@@ -16,34 +17,39 @@ import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
-import android.widget.ProgressBar;
 
 import com.tinno.android.appinfocollector.adapter.AppAdapter;
 import com.tinno.android.appinfocollector.adapter.AppRecyclerView;
+import com.tinno.android.appinfocollector.tools.AppInfo;
+import com.tinno.android.appinfocollector.tools.ApplicationInfoUtil;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements SearchView.OnQueryTextListener {
+public class MainActivity extends AppCompatActivity implements SearchView.OnQueryTextListener, CompoundButton.OnCheckedChangeListener {
     private static final String TAG = "boot";
     private long bootTime = 0;
     private AppRecyclerView mCrimeRecyclerView;
     private AppAdapter mAdapter;
-    private List<AppInfo> appInfos = new ArrayList<AppInfo>();
+    private List<AppInfo> appInfos;
     private boolean isScrollToTop = true;
     private ProgressDialog progressDialog;
     private Toolbar toolbar;
     private PopupWindow popupWindow;
     private View popupWindowView;
+    private ApplicationInfoUtil appTools;
+    private SearchView searchView;
+
+    private CheckBox showSys, showUninstall;
     AsyncTask<String, Integer, Boolean> appTask = new AsyncTask<String, Integer, Boolean>() {
-        private List<AppInfo> appInfos;
 
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-            appInfos = new ArrayList<AppInfo>();
+            appInfos.clear();
             showProgressDialog();
         }
 
@@ -52,7 +58,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             if (isCancelled()) {
                 return false;
             }
-            ApplicationInfoUtil.getAllProgramInfo(appInfos, MainActivity.this);
+            appTools.sync();
             return true;
         }
 
@@ -64,12 +70,11 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             }
 
             MainActivity.this.appInfos.clear();
-            MainActivity.this.appInfos.addAll(appInfos);
+            MainActivity.this.appInfos.addAll(appTools.getAppInfo(ApplicationInfoUtil.DEFAULT));
             initRecycleView();
             hideProgressDialog();
         }
     };
-
 
     public void showAsPopWindow() {
         if (popupWindow == null || popupWindowView == null) {
@@ -79,13 +84,43 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             popupWindow.setTouchable(true);
             popupWindow.setBackgroundDrawable(new ColorDrawable());
             popupWindow.setAnimationStyle(R.style.PopupAnimation);
+            showSys = popupWindowView.findViewById(R.id.show_sys_app);
+            showUninstall = popupWindowView.findViewById(R.id.show_uninstall);
+            popupWindow.setOnDismissListener(new PopupWindow.OnDismissListener() {
+                @Override
+                public void onDismiss() {
+
+                }
+            });
+
+            showSys.setChecked(true);
+            showUninstall.setChecked(true);
+            showSys.setOnCheckedChangeListener(this);
+            showUninstall.setOnCheckedChangeListener(this);
         }
-        popupWindow.showAtLocation(popupWindowView, Gravity.TOP | Gravity.END,0,toolbar.getMeasuredHeight());
+        popupWindow.showAtLocation(popupWindowView, Gravity.TOP | Gravity.END, 0, toolbar.getMeasuredHeight());
         popupWindow.showAsDropDown(popupWindowView);
 
     }
 
-    private int getStatusBarHeight( ) {
+    @Override
+    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+        if (showSys == buttonView || buttonView == showUninstall) {
+            appInfos.clear();
+
+            if (showSys.isChecked()) {
+                appInfos.addAll(appTools.getAppInfo(ApplicationInfoUtil.SYSTEM_APP));
+            }
+            if (showUninstall.isChecked()) {
+                appInfos.addAll(appTools.getAppInfo(ApplicationInfoUtil.NONSYSTEM_APP));
+            }
+
+            mAdapter.notifyDataSetChanged();
+        }
+
+    }
+
+    private int getStatusBarHeight() {
         int result = 0;
         int resourceId = getResources().getIdentifier("status_bar_height", "dimen", "android");
         if (resourceId > 0) {
@@ -106,6 +141,8 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         if (bootTime == 0) {
             bootTime = System.currentTimeMillis();
         }
+        appInfos = new ArrayList<>();
+        appTools = ApplicationInfoUtil.getIntance(this);
         testSpeedTime("onCreate");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -147,9 +184,8 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         toolbar = findViewById(R.id.toolbar);
 
         toolbar.inflateMenu(R.menu.toobar_item);
-        SearchView searchView = toolbar.findViewById(R.id.action_search_kl);
+        searchView = toolbar.findViewById(R.id.action_search_kl);
         toolbar.setNavigationIcon(R.mipmap.ic_launcher);
-        ApplicationInfoUtil.search(appInfos, null);
         searchView.setOnQueryTextListener(this);
 
         toolbar.setNavigationOnClickListener(new View.OnClickListener() {
@@ -204,7 +240,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     public boolean onQueryTextChange(String s) {
         Log.i("wangcan", "onQueryTextChange=" + s);
         if (appInfos != null && appInfos.size() > 0) {
-            ApplicationInfoUtil.search(appInfos, s);
+            appTools.search(appInfos, s);
             if (mAdapter != null) {
                 mAdapter.notifyDataSetChanged();
 
