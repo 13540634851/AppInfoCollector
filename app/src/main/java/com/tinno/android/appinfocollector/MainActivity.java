@@ -1,7 +1,6 @@
 package com.tinno.android.appinfocollector;
 
-import android.app.Dialog;
-import android.app.ProgressDialog;
+
 import android.graphics.drawable.ColorDrawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -15,12 +14,14 @@ import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
+import android.view.VelocityTracker;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 
+import com.open.dialog.base.LoadingDialog;
 import com.tinno.android.appinfocollector.adapter.AppAdapter;
 import com.tinno.android.appinfocollector.adapter.AppRecyclerView;
 import com.tinno.android.appinfocollector.tools.AppInfo;
@@ -36,7 +37,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     private AppAdapter mAdapter;
     private List<AppInfo> appInfos;
     private boolean isScrollToTop = true;
-    private ProgressDialog progressDialog;
+    private LoadingDialog loadingDialog;
     private Toolbar toolbar;
     private PopupWindow popupWindow;
     private View popupWindowView;
@@ -75,6 +76,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             hideProgressDialog();
         }
     };
+
 
     public void showAsPopWindow() {
         if (popupWindow == null || popupWindowView == null) {
@@ -120,15 +122,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
 
     }
 
-    private int getStatusBarHeight() {
-        int result = 0;
-        int resourceId = getResources().getIdentifier("status_bar_height", "dimen", "android");
-        if (resourceId > 0) {
-            result = getResources().getDimensionPixelSize(resourceId);
-        }
-        return result;
-    }
-
     private void hidePopWindow() {
         if (popupWindow == null) {
             return;
@@ -138,16 +131,17 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
         if (bootTime == 0) {
             bootTime = System.currentTimeMillis();
         }
         appInfos = new ArrayList<>();
         appTools = ApplicationInfoUtil.getIntance(this);
         testSpeedTime("onCreate");
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
         setUpView();
+
+        VelocityTracker velocityTracker=VelocityTracker.obtain();
     }
 
     private void initRecycleView() {
@@ -254,22 +248,22 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     protected void onDestroy() {
         super.onDestroy();
         appTask.cancel(true);
-        if (progressDialog != null) {
-            progressDialog.dismiss();
+        if (loadingDialog != null) {
+            loadingDialog.dismiss();
         }
     }
 
     public void showProgressDialog() {
-        if (progressDialog == null) {
-            progressDialog = new ProgressDialog(this);
-            progressDialog.setCanceledOnTouchOutside(false);
+        if (loadingDialog == null) {
+            loadingDialog = new LoadingDialog(this);
+            loadingDialog.setCanceledOnTouchOutside(false);
         }
-        progressDialog.show();
+        loadingDialog.show();
     }
 
     public void hideProgressDialog() {
-        if (progressDialog != null) {
-            progressDialog.hide();
+        if (loadingDialog != null) {
+            loadingDialog.hide();
         }
     }
 }

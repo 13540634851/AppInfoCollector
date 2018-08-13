@@ -138,9 +138,7 @@ public class ApplicationInfoUtil {
                 boolean o1ok = isAppinfoContainKey(o1, k);
                 boolean o2ok = isAppinfoContainKey(o2, k);
 
-
                 if (o1ok == o2ok) {
-
                     return o1.getAppName().toString().compareToIgnoreCase(o2.getAppName().toString());
                 } else {
                     return o1ok ? -1 : 1;
