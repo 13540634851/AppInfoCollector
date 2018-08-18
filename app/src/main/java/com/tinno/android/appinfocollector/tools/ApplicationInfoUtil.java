@@ -1,18 +1,22 @@
 package com.tinno.android.appinfocollector.tools;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.text.Spannable;
 import android.text.SpannableString;
+import android.text.TextUtils;
 import android.text.style.ForegroundColorSpan;
-import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -74,17 +78,26 @@ public class ApplicationInfoUtil {
 
     }
 
-    public String getAppNameByPackageName(String packageName) {
+    public AppInfo getAppInfoByPackageName(String packageName) {
         PackageManager pm = context.getPackageManager();
-        String name = null;
+        AppInfo appInfo = new AppInfo();
         try {
-            name = pm.getApplicationLabel(
-                    pm.getApplicationInfo(packageName,
-                            PackageManager.GET_META_DATA)).toString();
+
+            PackageInfo packageInfo = pm.getPackageInfo(packageName, PackageManager.GET_ACTIVITIES);
+            appInfo.setAppName(packageInfo.applicationInfo.loadLabel(
+                    context.getPackageManager()).toString());
+            appInfo.setAppDir(packageInfo.applicationInfo.sourceDir);
+
+            appInfo.setPackageName(packageInfo.packageName);
+            appInfo.setVersionName(packageInfo.versionName);
+            appInfo.setVersionCode(packageInfo.versionCode);
+            appInfo.setAppIcon(packageInfo.applicationInfo.loadIcon(context
+                    .getPackageManager()));
+
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return name;
+        return appInfo;
     }
 
 
@@ -148,7 +161,7 @@ public class ApplicationInfoUtil {
 
     }
 
-    private  boolean isAppinfoContainKey(AppInfo info, String onekey) {
+    private boolean isAppinfoContainKey(AppInfo info, String onekey) {
         boolean isContainKey = false;
         String key = onekey.toLowerCase();
         if (info.getAppDir().toString().toLowerCase().contains(key)) {
@@ -164,11 +177,17 @@ public class ApplicationInfoUtil {
             info.setPackageName(highlight(info.getPackageName().toString(), key));
             isContainKey = true;
         }
+
+        if (info.getVersionName().toString().toLowerCase().contains(key)) {
+            info.setVersionName(highlight(info.getVersionName().toString(), key));
+            isContainKey = true;
+        }
+
         return isContainKey;
 
     }
 
-    public  SpannableString highlight(String text, String target) {
+    public SpannableString highlight(String text, String target) {
         return highlight(text, target, Color.RED);
     }
 
@@ -182,5 +201,69 @@ public class ApplicationInfoUtil {
                     Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
         return spannableString;
+    }
+
+    public void registerReceiver(Context context, AppChangeCallback changeCallback) {
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction("android.intent.action.PACKAGE_ADDED");
+        intentFilter.addAction("android.intent.action.PACKAGE_REMOVED");
+        intentFilter.addDataScheme("package");
+        registerObj = context;
+        registerObj.registerReceiver(appReceiver, intentFilter);
+        this.changeCallback = changeCallback;
+    }
+
+
+    private AppReceiver appReceiver = new AppReceiver();
+    private AppChangeCallback changeCallback;
+    private Context registerObj = null;
+
+    public void unregisterReceiver() {
+        if (registerObj != null) {
+            registerObj.unregisterReceiver(appReceiver);
+        }
+        registerObj=null;
+    }
+
+    public interface AppChangeCallback {
+        public void installapp(AppInfo appInfo);
+
+        public void unstallapp(AppInfo appInfo);
+    }
+
+
+    class AppReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            PackageManager pm = context.getPackageManager();
+
+            if (TextUtils.equals(intent.getAction(), Intent.ACTION_PACKAGE_ADDED)) {
+                String packageName = intent.getData().getSchemeSpecificPart();
+                AppInfo info = getAppInfoByPackageName(packageName);
+                nonsysApplist.add(info);
+                if (changeCallback != null) {
+                    changeCallback.installapp(info);
+                }
+
+            } else if (TextUtils.equals(intent.getAction(), Intent.ACTION_PACKAGE_REPLACED)) {
+                String packageName = intent.getData().getSchemeSpecificPart();
+
+
+            } else if (TextUtils.equals(intent.getAction(), Intent.ACTION_PACKAGE_REMOVED)) {
+                String packageName = intent.getData().getSchemeSpecificPart();
+                Iterator<AppInfo> iterators = nonsysApplist.iterator();
+                while (iterators.hasNext()) {
+                    AppInfo appInfo = iterators.next();
+                    if (appInfo.getPackageName().equals(packageName)) {
+                        iterators.remove();
+                        if (changeCallback != null) {
+                            changeCallback.unstallapp(appInfo);
+                        }
+
+                        break;
+                    }
+                }
+            }
+        }
     }
 }

@@ -2,14 +2,15 @@ package com.tinno.android.appinfocollector.adapter;
 
 import android.content.Context;
 import android.support.v7.widget.RecyclerView;
+import android.text.SpannableStringBuilder;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.tinno.android.appinfocollector.tools.AppInfo;
 import com.tinno.android.appinfocollector.R;
+import com.tinno.android.appinfocollector.tools.AppInfo;
 
 import java.util.List;
 
@@ -78,7 +79,10 @@ class AppHolder extends RecyclerView.ViewHolder {
         mAppName.setText(mAppInfo.getAppName());
         mPkgName.setText(mAppInfo.getPackageName());
         mAppDir.setText(mAppInfo.getAppDir());
-        mAppVer.setText(mAppInfo.getVersionName() + "[" + mAppInfo.getVersionCode() + "]");
+        SpannableStringBuilder spannableStringBuilder = new SpannableStringBuilder();
+        spannableStringBuilder.append(mAppInfo.getVersionName());
+        spannableStringBuilder.append("[" + mAppInfo.getVersionCode() + "]");
+        mAppVer.setText(spannableStringBuilder);
     }
 
 }

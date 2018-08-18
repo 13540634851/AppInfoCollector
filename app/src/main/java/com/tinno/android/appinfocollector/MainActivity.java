@@ -1,6 +1,7 @@
 package com.tinno.android.appinfocollector;
 
 
+import android.content.Intent;
 import android.graphics.drawable.ColorDrawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -14,7 +15,6 @@ import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
-import android.view.VelocityTracker;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
@@ -30,7 +30,9 @@ import com.tinno.android.appinfocollector.tools.ApplicationInfoUtil;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements SearchView.OnQueryTextListener, CompoundButton.OnCheckedChangeListener {
+public class MainActivity extends AppCompatActivity implements SearchView.OnQueryTextListener
+        , CompoundButton.OnCheckedChangeListener
+        , ApplicationInfoUtil.AppChangeCallback {
     private static final String TAG = "boot";
     private long bootTime = 0;
     private AppRecyclerView mCrimeRecyclerView;
@@ -51,6 +53,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         protected void onPreExecute() {
             super.onPreExecute();
             appInfos.clear();
+            Log.i("wangcan", "onPreExecute");
             showProgressDialog();
         }
 
@@ -60,6 +63,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                 return false;
             }
             appTools.sync();
+            Log.i("wangcan", "doInBackground");
             return true;
         }
 
@@ -69,6 +73,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             if (isCancelled()) {
                 return;
             }
+            Log.i("wangcan", "onPostExecute");
 
             MainActivity.this.appInfos.clear();
             MainActivity.this.appInfos.addAll(appTools.getAppInfo(ApplicationInfoUtil.DEFAULT));
@@ -77,6 +82,17 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         }
     };
 
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+        Log.i("wangcan", "onRestart");
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        Log.i("wangcan", "onNewIntent");
+    }
 
     public void showAsPopWindow() {
         if (popupWindow == null || popupWindowView == null) {
@@ -103,21 +119,13 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         popupWindow.showAtLocation(popupWindowView, Gravity.TOP | Gravity.END, 0, toolbar.getMeasuredHeight());
         popupWindow.showAsDropDown(popupWindowView);
 
+
     }
 
     @Override
     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
         if (showSys == buttonView || buttonView == showUninstall) {
-            appInfos.clear();
-
-            if (showSys.isChecked()) {
-                appInfos.addAll(appTools.getAppInfo(ApplicationInfoUtil.SYSTEM_APP));
-            }
-            if (showUninstall.isChecked()) {
-                appInfos.addAll(appTools.getAppInfo(ApplicationInfoUtil.NONSYSTEM_APP));
-            }
-
-            mAdapter.notifyDataSetChanged();
+            updateAppInfo();
         }
 
     }
@@ -138,10 +146,9 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         }
         appInfos = new ArrayList<>();
         appTools = ApplicationInfoUtil.getIntance(this);
+        Log.i("wangcan", "onCreate");
         testSpeedTime("onCreate");
         setUpView();
-
-        VelocityTracker velocityTracker=VelocityTracker.obtain();
     }
 
     private void initRecycleView() {
@@ -171,6 +178,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             mAdapter.notifyDataSetChanged();
         }
 
+        appTools.registerReceiver(this, this);
     }
 
     private void setUpView() {
@@ -186,7 +194,9 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             @Override
             public void onClick(View view) {
                 if (!isScrollToTop) {
-                    mCrimeRecyclerView.smoothScrollToPosition(0);
+                    mCrimeRecyclerView.scrollToPosition(0);
+                } else {
+                    startActivity(new Intent(MainActivity.this, AboutActivity.class));
                 }
             }
         });
@@ -203,6 +213,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                 return true;
             }
         });
+        Log.i("wangcan", "appTask.execute()");
 
         appTask.execute();
     }
@@ -215,12 +226,19 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     @Override
     protected void onStart() {
         super.onStart();
+        Log.i("wangcan", "onstart");
     }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
+        appTools.unregisterReceiver();
+    }
 
     @Override
     protected void onResume() {
         super.onResume();
+        Log.i("wangcan", "onResume");
         testSpeedTime("onResume");
     }
 
@@ -265,6 +283,34 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         if (loadingDialog != null) {
             loadingDialog.hide();
         }
+    }
+
+    private void updateAppInfo() {
+        if (appInfos == null
+                || mAdapter == null
+                || appTools == null
+                || showUninstall == null
+                || showSys == null) {
+            return;
+        }
+        appInfos.clear();
+        if (showSys.isChecked()) {
+            appInfos.addAll(appTools.getAppInfo(ApplicationInfoUtil.SYSTEM_APP));
+        }
+        if (showUninstall.isChecked()) {
+            appInfos.addAll(appTools.getAppInfo(ApplicationInfoUtil.NONSYSTEM_APP));
+        }
+        mAdapter.notifyDataSetChanged();
+    }
+
+    @Override
+    public void installapp(AppInfo appInfo) {
+        updateAppInfo();
+    }
+
+    @Override
+    public void unstallapp(AppInfo appInfo) {
+        updateAppInfo();
     }
 }
 
