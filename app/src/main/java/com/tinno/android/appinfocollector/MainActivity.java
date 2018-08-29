@@ -3,12 +3,10 @@ package com.tinno.android.appinfocollector;
 
 import android.content.Intent;
 import android.graphics.drawable.ColorDrawable;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -20,6 +18,7 @@ import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
+import android.widget.Toast;
 
 import com.open.dialog.base.LoadingDialog;
 import com.tinno.android.appinfocollector.adapter.AppAdapter;
@@ -28,9 +27,10 @@ import com.tinno.android.appinfocollector.tools.AppInfo;
 import com.tinno.android.appinfocollector.tools.ApplicationInfoUtil;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements SearchView.OnQueryTextListener
+public class MainActivity extends BaseActivity implements SearchView.OnQueryTextListener
         , CompoundButton.OnCheckedChangeListener
         , ApplicationInfoUtil.AppChangeCallback {
     private static final String TAG = "boot";
@@ -45,9 +45,9 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     private View popupWindowView;
     private ApplicationInfoUtil appTools;
     private SearchView searchView;
-
-    private CheckBox showSys, showUninstall;
-    AsyncTask<String, Integer, Boolean> appTask = new AsyncTask<String, Integer, Boolean>() {
+    private Toast mToast;
+    private CheckBox showSys, showUninstall, showMyos;
+    private AsyncTask<String, Integer, Boolean> appTask = new AsyncTask<String, Integer, Boolean>() {
 
         @Override
         protected void onPreExecute() {
@@ -85,6 +85,11 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     @Override
     protected void onRestart() {
         super.onRestart();
+        int currentColor = getCurrentColor();
+        int color = getSetting(THEME, currentColor);
+        if (currentColor != color) {
+            adjustAppColor(color, true);
+        }
         Log.i("wangcan", "onRestart");
     }
 
@@ -103,6 +108,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             popupWindow.setBackgroundDrawable(new ColorDrawable());
             popupWindow.setAnimationStyle(R.style.PopupAnimation);
             showSys = popupWindowView.findViewById(R.id.show_sys_app);
+            showMyos = popupWindowView.findViewById(R.id.show_myos);
             showUninstall = popupWindowView.findViewById(R.id.show_uninstall);
             popupWindow.setOnDismissListener(new PopupWindow.OnDismissListener() {
                 @Override
@@ -112,8 +118,10 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             });
 
             showSys.setChecked(true);
+            showMyos.setChecked(false);
             showUninstall.setChecked(true);
             showSys.setOnCheckedChangeListener(this);
+            showMyos.setOnCheckedChangeListener(this);
             showUninstall.setOnCheckedChangeListener(this);
         }
         popupWindow.showAtLocation(popupWindowView, Gravity.TOP | Gravity.END, 0, toolbar.getMeasuredHeight());
@@ -124,7 +132,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
 
     @Override
     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-        if (showSys == buttonView || buttonView == showUninstall) {
+        if (showSys == buttonView || buttonView == showUninstall || buttonView == showMyos) {
             updateAppInfo();
         }
 
@@ -148,28 +156,14 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         appTools = ApplicationInfoUtil.getIntance(this);
         Log.i("wangcan", "onCreate");
         testSpeedTime("onCreate");
+
+
         setUpView();
     }
 
     private void initRecycleView() {
         mCrimeRecyclerView = findViewById(R.id.crime_recycler_view);
         mCrimeRecyclerView.setEmptyView(findViewById(R.id.empty_view));
-        mCrimeRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
-            @Override
-            public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
-                super.onScrollStateChanged(recyclerView, newState);
-                boolean isCurrentTop = !recyclerView.canScrollVertically(-1);
-                if (isCurrentTop != isScrollToTop) {
-                    isScrollToTop = isCurrentTop;
-                    if (isScrollToTop) {
-                        toolbar.setNavigationIcon(R.mipmap.ic_launcher);
-                    } else {
-                        toolbar.setNavigationIcon(android.R.drawable.ic_menu_upload);
-                    }
-                }
-            }
-        });
-
         mCrimeRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         if (mAdapter == null) {
             mAdapter = new AppAdapter(appInfos, this);
@@ -178,45 +172,71 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             mAdapter.notifyDataSetChanged();
         }
 
+        mAdapter.setOnItemClickListener((View view, int pos) -> {
+            AppInfo appInfo = appInfos.get(pos);
+            showToast("长按进入" + appInfo.getAppName() + "应用信息界面");
+        });
+
+        mAdapter.setOnItemLongClickListener((View view, int pos) -> {
+            AppInfo appInfo = appInfos.get(pos);
+            Intent intent = new Intent();
+            intent.setAction("android.settings.APPLICATION_DETAILS_SETTINGS");
+            intent.setData(Uri.parse("package:" + appInfo.getPackageName()));
+            startActivity(intent);
+            return true;
+        });
         appTools.registerReceiver(this, this);
     }
+
+    private void showToast(String msg){
+        Log.i("wangcan",msg);
+        if(mToast==null){
+            mToast= Toast.makeText(this, msg, Toast.LENGTH_LONG);
+        }else{
+            mToast.setText(msg);
+        }
+        mToast.show();
+    }
+
 
     private void setUpView() {
 
         toolbar = findViewById(R.id.toolbar);
-
         toolbar.inflateMenu(R.menu.toobar_item);
         searchView = toolbar.findViewById(R.id.action_search_kl);
         toolbar.setNavigationIcon(R.mipmap.ic_launcher);
-        searchView.setOnQueryTextListener(this);
-
         toolbar.setNavigationOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
-                if (!isScrollToTop) {
-                    mCrimeRecyclerView.scrollToPosition(0);
-                } else {
-                    startActivity(new Intent(MainActivity.this, AboutActivity.class));
-                }
+            public void onClick(View v) {
+                mCrimeRecyclerView.scrollToPosition(0);
             }
         });
-
+        searchView.setOnQueryTextListener(this);
         toolbar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
-                if (popupWindow == null || !popupWindow.isShowing()) {
-                    showAsPopWindow();
-                } else if (popupWindow.isShowing()) {
-                    hidePopWindow();
+                if (item.getItemId() == R.id.menu_filter) {
+                    if (popupWindow == null || !popupWindow.isShowing()) {
+                        showAsPopWindow();
+                    } else if (popupWindow.isShowing()) {
+                        hidePopWindow();
+                    }
+                } else if (item.getItemId() == R.id.menu_theme) {
+                    startActivity(new Intent(MainActivity.this, ThemeActivity.class));
+                } else if (item.getItemId() == R.id.menu_about) {
+                    startActivity(new Intent(MainActivity.this, AboutActivity.class));
                 }
+
 
                 return true;
             }
         });
         Log.i("wangcan", "appTask.execute()");
-
+        adjustAppColor(getSetting(THEME, getColor(R.color.colorBackground)), false);
+        setSetting(THEME, getCurrentColor());
         appTask.execute();
     }
+
 
     private void testSpeedTime(String msg) {
         Log.i(TAG, msg + " " + (System.currentTimeMillis() - bootTime));
@@ -300,6 +320,16 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         if (showUninstall.isChecked()) {
             appInfos.addAll(appTools.getAppInfo(ApplicationInfoUtil.NONSYSTEM_APP));
         }
+        if (showMyos.isChecked()) {
+            Iterator<AppInfo> allinfo = appInfos.iterator();
+            AppInfo info;
+            while (allinfo.hasNext()) {
+                info = allinfo.next();
+                if (!info.getAppDir().toString().toLowerCase().contains("/ape")) {
+                    allinfo.remove();
+                }
+            }
+        }
         mAdapter.notifyDataSetChanged();
     }
 
@@ -311,6 +341,14 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     @Override
     public void unstallapp(AppInfo appInfo) {
         updateAppInfo();
+    }
+
+    @Override
+    protected void colorChange(int color) {
+        super.colorChange(color);
+        if (toolbar != null) {
+            // toolbar.setBackgroundColor(color);
+        }
     }
 }
 

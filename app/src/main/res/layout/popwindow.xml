@@ -7,15 +7,25 @@
     android:orientation="vertical">
 
     <CheckBox
+        android:checked="true"
         android:id="@+id/show_sys_app"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="显示系统app" />
 
     <CheckBox
+        android:checked="true"
         android:id="@+id/show_uninstall"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="显示可卸载" />
+
+
+    <CheckBox
+        android:id="@+id/show_myos"
+        android:checked="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="仅显示Myos应用" />
 
 </LinearLayout>
