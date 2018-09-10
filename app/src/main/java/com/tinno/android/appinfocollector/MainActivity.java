@@ -1,6 +1,8 @@
 package com.tinno.android.appinfocollector;
 
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
@@ -46,6 +48,7 @@ public class MainActivity extends BaseActivity implements SearchView.OnQueryText
     private ApplicationInfoUtil appTools;
     private SearchView searchView;
     private Toast mToast;
+    private AlertDialog appLauchInfoDialog;
     private CheckBox showSys, showUninstall, showMyos;
     private AsyncTask<String, Integer, Boolean> appTask = new AsyncTask<String, Integer, Boolean>() {
 
@@ -175,6 +178,28 @@ public class MainActivity extends BaseActivity implements SearchView.OnQueryText
         mAdapter.setOnItemClickListener((View view, int pos) -> {
             AppInfo appInfo = appInfos.get(pos);
             showToast("长按进入" + appInfo.getAppName() + "应用信息界面");
+            List<String> listLunch = appTools.getLaunchActivities(MainActivity.this, appInfo.getPackageName().toString());
+            if (appLauchInfoDialog == null) {
+                appLauchInfoDialog = new AlertDialog.Builder(MainActivity.this).create();
+            }
+            appLauchInfoDialog.setTitle("启动App");
+            StringBuilder sb = new StringBuilder();
+            if (listLunch.size() == 0) {
+                sb.append("没有启动入口");
+            } else {
+                sb.append("启动\n");
+                for (String s : listLunch) {
+                    sb.append(s + "\n");
+                }
+            }
+            appLauchInfoDialog.setMessage(sb.toString());
+            appLauchInfoDialog.setButton("返回", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    appLauchInfoDialog.dismiss();
+                }
+            });
+            appLauchInfoDialog.show();
         });
 
         mAdapter.setOnItemLongClickListener((View view, int pos) -> {
@@ -188,11 +213,11 @@ public class MainActivity extends BaseActivity implements SearchView.OnQueryText
         appTools.registerReceiver(this, this);
     }
 
-    private void showToast(String msg){
-        Log.i("wangcan",msg);
-        if(mToast==null){
-            mToast= Toast.makeText(this, msg, Toast.LENGTH_LONG);
-        }else{
+    private void showToast(String msg) {
+        Log.i("wangcan", msg);
+        if (mToast == null) {
+            mToast = Toast.makeText(this, msg, Toast.LENGTH_LONG);
+        } else {
             mToast.setText(msg);
         }
         mToast.show();

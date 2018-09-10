@@ -46,6 +46,7 @@ public class AppRecyclerView extends RecyclerView {
 
     @Override
     public void setAdapter(Adapter adapter) {
+
         final Adapter oldAdapter = getAdapter();
         if (oldAdapter != null) {
             oldAdapter.unregisterAdapterDataObserver(observer);

@@ -1,5 +1,6 @@
 package com.tinno.android.appinfocollector.tools;
 
+import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -7,6 +8,7 @@ import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.graphics.Color;
 import android.text.Spannable;
 import android.text.SpannableString;
@@ -222,7 +224,7 @@ public class ApplicationInfoUtil {
         if (registerObj != null) {
             registerObj.unregisterReceiver(appReceiver);
         }
-        registerObj=null;
+        registerObj = null;
     }
 
     public interface AppChangeCallback {
@@ -265,5 +267,21 @@ public class ApplicationInfoUtil {
                 }
             }
         }
+    }
+
+    public List<String> getLaunchActivities(Activity activity, String packageName) {
+        Intent localIntent = new Intent("android.intent.action.MAIN", null);
+        localIntent.addCategory("android.intent.category.LAUNCHER");
+        List<ResolveInfo> appList = activity.getPackageManager().queryIntentActivities(localIntent, 0);
+        List<String> activitys = new ArrayList<>();
+        for (int i = 0; i < appList.size(); i++) {
+            ResolveInfo resolveInfo = appList.get(i);
+            String packageStr = resolveInfo.activityInfo.packageName;
+            if (packageStr.equals(packageName)) {
+                //这个就是你想要的那个Activity
+                activitys.add(resolveInfo.activityInfo.name);
+            }
+        }
+        return activitys;
     }
 }
