@@ -2,6 +2,9 @@ package com.tinno.android.appinfocollector.tools;
 
 import android.graphics.drawable.Drawable;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Created by weizhengliang on 17-3-16.
  */
@@ -10,14 +13,36 @@ public class AppInfo {
     private CharSequence packageName;
     private CharSequence versionName;
     private int versionCode = 0;
+    private List<String> launcherlist;
     private Drawable appIcon = null;
     private CharSequence appDir;
 
-    public void cleanHight(){
+    public void cleanHight() {
         setAppName(appName.toString());
         setPackageName(packageName.toString());
         setVersionName(versionName.toString());
         setAppDir(appDir.toString());
+    }
+
+    public void addLauncher(String luncher) {
+        if (launcherlist == null) {
+            launcherlist = new ArrayList<>();
+        }
+        if (!launcherlist.contains(luncher)) {
+            launcherlist.add(luncher);
+        }
+    }
+
+    public List<String> getLauncherlist() {
+        return launcherlist;
+    }
+
+    public void addLauncher(List<String> luncher) {
+        if (launcherlist == null) {
+            launcherlist = new ArrayList<>();
+        }
+        launcherlist.clear();
+        launcherlist.addAll(luncher);
     }
 
     public void setVersionName(CharSequence versionName) {
@@ -70,6 +95,16 @@ public class AppInfo {
 
     @Override
     public String toString() {
-        return super.toString();
+        StringBuilder sb=new StringBuilder();
+        if(launcherlist!=null&&launcherlist.size()>0){
+            for(String l:launcherlist){
+                sb.append("\n    "+l);
+            }
+        }
+        return "应用名称:" +appName+
+                "\n  包名:" +packageName+
+                "\n  启动Activity:" +sb.toString()+
+                "\n  路径：" +appDir+
+                "\n  版本信息:"+versionName+"["+versionCode+"]";
     }
 }

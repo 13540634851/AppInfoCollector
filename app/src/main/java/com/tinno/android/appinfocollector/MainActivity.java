@@ -35,12 +35,10 @@ import java.util.List;
 public class MainActivity extends BaseActivity implements SearchView.OnQueryTextListener
         , CompoundButton.OnCheckedChangeListener
         , ApplicationInfoUtil.AppChangeCallback {
-    private static final String TAG = "boot";
     private long bootTime = 0;
     private AppRecyclerView mCrimeRecyclerView;
     private AppAdapter mAdapter;
     private List<AppInfo> appInfos;
-    private boolean isScrollToTop = true;
     private LoadingDialog loadingDialog;
     private Toolbar toolbar;
     private PopupWindow popupWindow;
@@ -49,14 +47,13 @@ public class MainActivity extends BaseActivity implements SearchView.OnQueryText
     private SearchView searchView;
     private Toast mToast;
     private AlertDialog appLauchInfoDialog;
-    private CheckBox showSys, showUninstall, showMyos;
+    private CheckBox showSys, showUninstall, showMyos, showLunch;
     private AsyncTask<String, Integer, Boolean> appTask = new AsyncTask<String, Integer, Boolean>() {
 
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
             appInfos.clear();
-            Log.i("wangcan", "onPreExecute");
             showProgressDialog();
         }
 
@@ -66,7 +63,6 @@ public class MainActivity extends BaseActivity implements SearchView.OnQueryText
                 return false;
             }
             appTools.sync();
-            Log.i("wangcan", "doInBackground");
             return true;
         }
 
@@ -76,8 +72,6 @@ public class MainActivity extends BaseActivity implements SearchView.OnQueryText
             if (isCancelled()) {
                 return;
             }
-            Log.i("wangcan", "onPostExecute");
-
             MainActivity.this.appInfos.clear();
             MainActivity.this.appInfos.addAll(appTools.getAppInfo(ApplicationInfoUtil.DEFAULT));
             initRecycleView();
@@ -93,13 +87,6 @@ public class MainActivity extends BaseActivity implements SearchView.OnQueryText
         if (currentColor != color) {
             adjustAppColor(color, true);
         }
-        Log.i("wangcan", "onRestart");
-    }
-
-    @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        Log.i("wangcan", "onNewIntent");
     }
 
     public void showAsPopWindow() {
@@ -113,19 +100,15 @@ public class MainActivity extends BaseActivity implements SearchView.OnQueryText
             showSys = popupWindowView.findViewById(R.id.show_sys_app);
             showMyos = popupWindowView.findViewById(R.id.show_myos);
             showUninstall = popupWindowView.findViewById(R.id.show_uninstall);
-            popupWindow.setOnDismissListener(new PopupWindow.OnDismissListener() {
-                @Override
-                public void onDismiss() {
-
-                }
-            });
-
+            showLunch = popupWindowView.findViewById(R.id.show_launch);
             showSys.setChecked(true);
             showMyos.setChecked(false);
             showUninstall.setChecked(true);
+            showLunch.setChecked(false);
             showSys.setOnCheckedChangeListener(this);
             showMyos.setOnCheckedChangeListener(this);
             showUninstall.setOnCheckedChangeListener(this);
+            showLunch.setOnCheckedChangeListener(this);
         }
         popupWindow.showAtLocation(popupWindowView, Gravity.TOP | Gravity.END, 0, toolbar.getMeasuredHeight());
         popupWindow.showAsDropDown(popupWindowView);
@@ -135,10 +118,12 @@ public class MainActivity extends BaseActivity implements SearchView.OnQueryText
 
     @Override
     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-        if (showSys == buttonView || buttonView == showUninstall || buttonView == showMyos) {
+        if (showLunch == buttonView
+                || showSys == buttonView
+                || buttonView == showUninstall
+                || buttonView == showMyos) {
             updateAppInfo();
         }
-
     }
 
     private void hidePopWindow() {
@@ -157,10 +142,6 @@ public class MainActivity extends BaseActivity implements SearchView.OnQueryText
         }
         appInfos = new ArrayList<>();
         appTools = ApplicationInfoUtil.getIntance(this);
-        Log.i("wangcan", "onCreate");
-        testSpeedTime("onCreate");
-
-
         setUpView();
     }
 
@@ -178,7 +159,7 @@ public class MainActivity extends BaseActivity implements SearchView.OnQueryText
         mAdapter.setOnItemClickListener((View view, int pos) -> {
             AppInfo appInfo = appInfos.get(pos);
             showToast("长按进入" + appInfo.getAppName() + "应用信息界面");
-            List<String> listLunch = appTools.getLaunchActivities(MainActivity.this, appInfo.getPackageName().toString());
+            List<String> listLunch = appInfo.getLauncherlist();
             if (appLauchInfoDialog == null) {
                 appLauchInfoDialog = new AlertDialog.Builder(MainActivity.this).create();
             }
@@ -214,7 +195,6 @@ public class MainActivity extends BaseActivity implements SearchView.OnQueryText
     }
 
     private void showToast(String msg) {
-        Log.i("wangcan", msg);
         if (mToast == null) {
             mToast = Toast.makeText(this, msg, Toast.LENGTH_LONG);
         } else {
@@ -250,66 +230,42 @@ public class MainActivity extends BaseActivity implements SearchView.OnQueryText
                     startActivity(new Intent(MainActivity.this, ThemeActivity.class));
                 } else if (item.getItemId() == R.id.menu_about) {
                     startActivity(new Intent(MainActivity.this, AboutActivity.class));
+                } else if (item.getItemId() == R.id.menu_export) {
+                    for (AppInfo appInfo : appInfos) {
+                        Log.i("appabout", "\n"+appInfo.toString());
+                        showToast("输入adb logcat -s appabout，打印");
+                    }
                 }
 
 
                 return true;
             }
         });
-        Log.i("wangcan", "appTask.execute()");
         adjustAppColor(getSetting(THEME, getColor(R.color.colorBackground)), false);
         setSetting(THEME, getCurrentColor());
         appTask.execute();
     }
 
-
-    private void testSpeedTime(String msg) {
-        Log.i(TAG, msg + " " + (System.currentTimeMillis() - bootTime));
-        bootTime = System.currentTimeMillis();
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        Log.i("wangcan", "onstart");
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        appTools.unregisterReceiver();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Log.i("wangcan", "onResume");
-        testSpeedTime("onResume");
-    }
-
     @Override
     public boolean onQueryTextSubmit(String s) {
-        Log.i("wangcan", "onQueryTextSubmit=" + s);
         return false;
     }
 
     @Override
     public boolean onQueryTextChange(String s) {
-        Log.i("wangcan", "onQueryTextChange=" + s);
         if (appInfos != null && appInfos.size() > 0) {
             appTools.search(appInfos, s);
             if (mAdapter != null) {
                 mAdapter.notifyDataSetChanged();
-
             }
         }
         return true;
     }
 
-
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        appTools.unregisterReceiver();
         appTask.cancel(true);
         if (loadingDialog != null) {
             loadingDialog.dismiss();
@@ -334,6 +290,7 @@ public class MainActivity extends BaseActivity implements SearchView.OnQueryText
         if (appInfos == null
                 || mAdapter == null
                 || appTools == null
+                || showLunch == null
                 || showUninstall == null
                 || showSys == null) {
             return;
@@ -355,6 +312,18 @@ public class MainActivity extends BaseActivity implements SearchView.OnQueryText
                 }
             }
         }
+
+        if (showLunch.isChecked()) {
+            Iterator<AppInfo> allinfo = appInfos.iterator();
+            AppInfo info;
+            while (allinfo.hasNext()) {
+                info = allinfo.next();
+                if (info.getLauncherlist().size() == 0) {
+                    allinfo.remove();
+                }
+            }
+        }
+
         mAdapter.notifyDataSetChanged();
     }
 

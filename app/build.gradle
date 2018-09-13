@@ -6,8 +6,6 @@ android {
         applicationId "com.tinno.android.appinfocollector"
         minSdkVersion 24
         targetSdkVersion 27
-        versionCode 1
-        versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {

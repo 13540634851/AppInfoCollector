@@ -14,12 +14,15 @@ import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.TextUtils;
 import android.text.style.ForegroundColorSpan;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -33,6 +36,7 @@ public class ApplicationInfoUtil {
 
     private static ApplicationInfoUtil intance;
     private Context context;
+    private Map<String, String[]> launcherMap;
     private List<AppInfo> sysApplist, nonsysApplist;
 
     public static ApplicationInfoUtil getIntance(Context context) {
@@ -48,12 +52,14 @@ public class ApplicationInfoUtil {
         this.context = context;
         sysApplist = new ArrayList<>();
         nonsysApplist = new ArrayList<>();
+        launcherMap = new HashMap<>();
     }
 
     public void sync() {
-
         sysApplist.clear();
         nonsysApplist.clear();
+        launcherMap.clear();
+
 
         List<PackageInfo> packages = context.getPackageManager()
                 .getInstalledPackages(0);
@@ -71,12 +77,18 @@ public class ApplicationInfoUtil {
             tmpInfo.setAppIcon(packageInfo.applicationInfo.loadIcon(context
                     .getPackageManager()));
 
+            tmpInfo.addLauncher(getLaunchActivities(context, tmpInfo.getPackageName().toString()));
+
             if (isSystemAPP(packageInfo)) {
                 sysApplist.add(tmpInfo);
             } else {
                 nonsysApplist.add(tmpInfo);
             }
         }
+
+
+        //launche info
+
 
     }
 
@@ -237,11 +249,11 @@ public class ApplicationInfoUtil {
     class AppReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
-            PackageManager pm = context.getPackageManager();
-
+            Log.i("wangcan", "app change");
             if (TextUtils.equals(intent.getAction(), Intent.ACTION_PACKAGE_ADDED)) {
                 String packageName = intent.getData().getSchemeSpecificPart();
                 AppInfo info = getAppInfoByPackageName(packageName);
+                info.addLauncher(getLaunchActivities(context, info.getPackageName().toString()));
                 nonsysApplist.add(info);
                 if (changeCallback != null) {
                     changeCallback.installapp(info);
@@ -269,10 +281,10 @@ public class ApplicationInfoUtil {
         }
     }
 
-    public List<String> getLaunchActivities(Activity activity, String packageName) {
+    private List<String> getLaunchActivities(Context context, String packageName) {
         Intent localIntent = new Intent("android.intent.action.MAIN", null);
         localIntent.addCategory("android.intent.category.LAUNCHER");
-        List<ResolveInfo> appList = activity.getPackageManager().queryIntentActivities(localIntent, 0);
+        List<ResolveInfo> appList = context.getPackageManager().queryIntentActivities(localIntent, 0);
         List<String> activitys = new ArrayList<>();
         for (int i = 0; i < appList.size(); i++) {
             ResolveInfo resolveInfo = appList.get(i);

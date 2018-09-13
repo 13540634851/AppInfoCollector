@@ -24,6 +24,12 @@
         app:showAsAction="never" />
 
     <item
+        android:id="@+id/menu_export"
+        android:title="导出信息"
+        android:orderInCategory="4"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/menu_about"
         android:title="关于我们"
         android:orderInCategory="4"

@@ -2,4 +2,7 @@
     <string name="app_name">AppInfoCollector</string>
     <string name="app_search">App Search</string>
     <string name="action_search_knowledge">AppInfoCollector</string>
+    <string name="version_name">1.0</string>
+    <string name="version_code">1.0</string>
+    <string name="about">最后一次修改日期：2018-9-13\n版本1.0</string>
 </resources>

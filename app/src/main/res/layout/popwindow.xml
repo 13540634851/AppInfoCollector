@@ -28,4 +28,11 @@
         android:layout_height="wrap_content"
         android:text="仅显示Myos应用" />
 
+    <CheckBox
+        android:id="@+id/show_launch"
+        android:checked="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="仅显示桌面应用" />
+
 </LinearLayout>
