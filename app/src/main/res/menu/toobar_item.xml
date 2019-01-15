@@ -14,12 +14,6 @@
     <item
         android:id="@+id/menu_filter"
         android:title="过滤器"
-        android:orderInCategory="2"
-        app:showAsAction="never" />
-
-    <item
-        android:id="@+id/menu_theme"
-        android:title="主题"
         android:orderInCategory="3"
         app:showAsAction="never" />
 
@@ -30,14 +24,10 @@
         app:showAsAction="never" />
 
     <item
-        android:id="@+id/menu_about"
-        android:title="关于我们"
-        android:orderInCategory="4"
-        app:showAsAction="never" />
-
-
-
-
+        android:id="@+id/menu_update"
+        android:title="刷新"
+        android:orderInCategory="2"
+        app:showAsAction="always" />
 </menu>
 
 

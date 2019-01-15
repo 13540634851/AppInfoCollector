@@ -1,4 +1,4 @@
-package com.tinno.android.appinfocollector.adapter;
+package com.tinno.android.appinfocollector.presenter;
 
 import android.content.Context;
 import android.support.annotation.NonNull;

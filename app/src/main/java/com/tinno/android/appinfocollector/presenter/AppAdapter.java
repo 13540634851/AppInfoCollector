@@ -1,4 +1,4 @@
-package com.tinno.android.appinfocollector.adapter;
+package com.tinno.android.appinfocollector.presenter;
 
 import android.content.Context;
 import android.support.v7.widget.RecyclerView;
@@ -11,7 +11,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.tinno.android.appinfocollector.R;
-import com.tinno.android.appinfocollector.tools.AppInfo;
+import com.tinno.android.appinfocollector.model.AppInfo;
 
 import java.util.List;
 

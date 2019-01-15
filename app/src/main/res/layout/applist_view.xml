@@ -7,7 +7,7 @@
     android:orientation="vertical"
     app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-    <com.tinno.android.appinfocollector.adapter.AppRecyclerView
+    <com.tinno.android.appinfocollector.presenter.AppRecyclerView
         android:id="@+id/crime_recycler_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />

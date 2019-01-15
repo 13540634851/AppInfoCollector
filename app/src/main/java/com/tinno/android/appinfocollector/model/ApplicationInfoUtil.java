@@ -1,10 +1,8 @@
-package com.tinno.android.appinfocollector.tools;
+package com.tinno.android.appinfocollector.model;
 
-import android.app.Activity;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -12,17 +10,21 @@ import android.content.pm.ResolveInfo;
 import android.graphics.Color;
 import android.text.Spannable;
 import android.text.SpannableString;
-import android.text.TextUtils;
 import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,13 +32,15 @@ import java.util.regex.Pattern;
  * Created by weizhengliang on 17-3-16.
  */
 public class ApplicationInfoUtil {
-    public static final int DEFAULT = 0; // 默认 所有应用
-    public static final int SYSTEM_APP = DEFAULT + 1; // 系统应用
-    public static final int NONSYSTEM_APP = DEFAULT + 2; // 非系统应用
+    //Launch(1,0,0)  Myos(0,1,0)  uninstall_APP(0,0,1) all(0,0,0)
+    public static final int UNINSTALL = 1; // uninstall应用
+    public static final int ALL = 0; // all应用
+    public static final int MYOS_APP = UNINSTALL << 1; // myos应用
+    public static final int LAUNCH_APP = UNINSTALL << 2; // launch应用
+
 
     private static ApplicationInfoUtil intance;
     private Context context;
-    private Map<String, String[]> launcherMap;
     private List<AppInfo> sysApplist, nonsysApplist;
 
     public static ApplicationInfoUtil getIntance(Context context) {
@@ -52,15 +56,44 @@ public class ApplicationInfoUtil {
         this.context = context;
         sysApplist = new ArrayList<>();
         nonsysApplist = new ArrayList<>();
-        launcherMap = new HashMap<>();
     }
 
-    public void sync() {
-        sysApplist.clear();
-        nonsysApplist.clear();
-        launcherMap.clear();
+    public void setCache() {
+        SharedPreferences preferences = context.getSharedPreferences("app_cache", Context.MODE_PRIVATE);
+        JSONArray arry = new JSONArray();
+        try {
+            arry.put(0, sysApplist);
+            arry.put(1, nonsysApplist);
+            preferences.edit().putString("apps", arry.toString());
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
 
+    public boolean getCache() {
+        SharedPreferences preferences = context.getSharedPreferences("app_cache", Context.MODE_PRIVATE);
+        try {
+            JSONArray array = new JSONArray(preferences.getString("apps", "null"));
+            sysApplist = (List<AppInfo>) array.get(0);
+            nonsysApplist = (List<AppInfo>) array.get(1);
+            if (sysApplist != null && sysApplist.size() > 0) {
+                return true;
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 
+    public void sync(boolean cacheFirst) {
+
+        if (!cacheFirst) {
+            sysApplist.clear();
+            nonsysApplist.clear();
+        }
+        if (sysApplist != null && sysApplist.size() > 0) {
+            return;
+        }
         List<PackageInfo> packages = context.getPackageManager()
                 .getInstalledPackages(0);
 
@@ -85,18 +118,13 @@ public class ApplicationInfoUtil {
                 nonsysApplist.add(tmpInfo);
             }
         }
-
-
-        //launche info
-
-
+        //setCache();
     }
 
     public AppInfo getAppInfoByPackageName(String packageName) {
         PackageManager pm = context.getPackageManager();
         AppInfo appInfo = new AppInfo();
         try {
-
             PackageInfo packageInfo = pm.getPackageInfo(packageName, PackageManager.GET_ACTIVITIES);
             appInfo.setAppName(packageInfo.applicationInfo.loadLabel(
                     context.getPackageManager()).toString());
@@ -117,17 +145,42 @@ public class ApplicationInfoUtil {
 
     public List<AppInfo> getAppInfo(int type) {
         List<AppInfo> rtrAppInfos = new ArrayList<>();
-        switch (type) {
-            case SYSTEM_APP:
-                rtrAppInfos.addAll(sysApplist);
-                break;
-            case NONSYSTEM_APP:
-                rtrAppInfos.addAll(nonsysApplist);
-                break;
-            case DEFAULT:
-                rtrAppInfos.addAll(sysApplist);
-                rtrAppInfos.addAll(nonsysApplist);
-                break;
+        Log.i("wangcan", "应用：" + Integer.toBinaryString(type));
+        if ((type & UNINSTALL) == UNINSTALL) {
+            rtrAppInfos.addAll(nonsysApplist);
+            Log.i("wangcan", "可卸载的应用");
+        } else {
+            rtrAppInfos.addAll(sysApplist);
+            rtrAppInfos.addAll(nonsysApplist);
+            Log.i("wangcan", "所有的应用");
+        }
+
+        if ((type & MYOS_APP) == MYOS_APP) {
+            Log.i("wangcan", "myos的应用");
+            Iterator<AppInfo> allinfo = rtrAppInfos.iterator();
+            AppInfo info;
+            while (allinfo.hasNext()) {
+                info = allinfo.next();
+                if (!info.getAppDir().toString().toLowerCase().contains("/ape")) {
+                    allinfo.remove();
+                }
+            }
+        } else {
+            Log.i("wangcan", "非myos的应用");
+        }
+
+        if ((type & LAUNCH_APP) == LAUNCH_APP) {
+            Log.i("wangcan", "launch的应用");
+            Iterator<AppInfo> allinfo = rtrAppInfos.iterator();
+            AppInfo info;
+            while (allinfo.hasNext()) {
+                info = allinfo.next();
+                if (info.getLauncherlist().size() == 0) {
+                    allinfo.remove();
+                }
+            }
+        } else {
+            Log.i("wangcan", "非launch的应用");
         }
         return rtrAppInfos;
     }
@@ -217,69 +270,6 @@ public class ApplicationInfoUtil {
         return spannableString;
     }
 
-    public void registerReceiver(Context context, AppChangeCallback changeCallback) {
-        IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction("android.intent.action.PACKAGE_ADDED");
-        intentFilter.addAction("android.intent.action.PACKAGE_REMOVED");
-        intentFilter.addDataScheme("package");
-        registerObj = context;
-        registerObj.registerReceiver(appReceiver, intentFilter);
-        this.changeCallback = changeCallback;
-    }
-
-
-    private AppReceiver appReceiver = new AppReceiver();
-    private AppChangeCallback changeCallback;
-    private Context registerObj = null;
-
-    public void unregisterReceiver() {
-        if (registerObj != null) {
-            registerObj.unregisterReceiver(appReceiver);
-        }
-        registerObj = null;
-    }
-
-    public interface AppChangeCallback {
-        public void installapp(AppInfo appInfo);
-
-        public void unstallapp(AppInfo appInfo);
-    }
-
-
-    class AppReceiver extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Log.i("wangcan", "app change");
-            if (TextUtils.equals(intent.getAction(), Intent.ACTION_PACKAGE_ADDED)) {
-                String packageName = intent.getData().getSchemeSpecificPart();
-                AppInfo info = getAppInfoByPackageName(packageName);
-                info.addLauncher(getLaunchActivities(context, info.getPackageName().toString()));
-                nonsysApplist.add(info);
-                if (changeCallback != null) {
-                    changeCallback.installapp(info);
-                }
-
-            } else if (TextUtils.equals(intent.getAction(), Intent.ACTION_PACKAGE_REPLACED)) {
-                String packageName = intent.getData().getSchemeSpecificPart();
-
-
-            } else if (TextUtils.equals(intent.getAction(), Intent.ACTION_PACKAGE_REMOVED)) {
-                String packageName = intent.getData().getSchemeSpecificPart();
-                Iterator<AppInfo> iterators = nonsysApplist.iterator();
-                while (iterators.hasNext()) {
-                    AppInfo appInfo = iterators.next();
-                    if (appInfo.getPackageName().equals(packageName)) {
-                        iterators.remove();
-                        if (changeCallback != null) {
-                            changeCallback.unstallapp(appInfo);
-                        }
-
-                        break;
-                    }
-                }
-            }
-        }
-    }
 
     private List<String> getLaunchActivities(Context context, String packageName) {
         Intent localIntent = new Intent("android.intent.action.MAIN", null);

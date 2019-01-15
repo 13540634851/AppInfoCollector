@@ -1,13 +1,18 @@
-package com.tinno.android.appinfocollector;
+package com.tinno.android.appinfocollector.view;
 
 
+import android.Manifest;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
@@ -23,71 +28,38 @@ import android.widget.PopupWindow;
 import android.widget.Toast;
 
 import com.open.dialog.base.LoadingDialog;
-import com.tinno.android.appinfocollector.adapter.AppAdapter;
-import com.tinno.android.appinfocollector.adapter.AppRecyclerView;
-import com.tinno.android.appinfocollector.tools.AppInfo;
-import com.tinno.android.appinfocollector.tools.ApplicationInfoUtil;
+import com.tinno.android.appinfocollector.R;
+import com.tinno.android.appinfocollector.model.AppInfo;
+import com.tinno.android.appinfocollector.model.ApplicationInfoUtil;
+import com.tinno.android.appinfocollector.presenter.AppAdapter;
+import com.tinno.android.appinfocollector.presenter.AppInfoTask;
+import com.tinno.android.appinfocollector.presenter.AppRecyclerView;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
-public class MainActivity extends BaseActivity implements SearchView.OnQueryTextListener
-        , CompoundButton.OnCheckedChangeListener
-        , ApplicationInfoUtil.AppChangeCallback {
+public class MainActivity extends AppCompatActivity implements SearchView.OnQueryTextListener
+        , CompoundButton.OnCheckedChangeListener, AppInfoTask.AppLoadListener {
     private long bootTime = 0;
     private AppRecyclerView mCrimeRecyclerView;
     private AppAdapter mAdapter;
     private List<AppInfo> appInfos;
-    private LoadingDialog loadingDialog;
     private Toolbar toolbar;
     private PopupWindow popupWindow;
     private View popupWindowView;
-    private ApplicationInfoUtil appTools;
     private SearchView searchView;
     private Toast mToast;
     private AlertDialog appLauchInfoDialog;
-    private CheckBox showSys, showUninstall, showMyos, showLunch;
-    private AsyncTask<String, Integer, Boolean> appTask = new AsyncTask<String, Integer, Boolean>() {
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            appInfos.clear();
-            showProgressDialog();
-        }
-
-        @Override
-        protected Boolean doInBackground(String... Strings) {
-            if (isCancelled()) {
-                return false;
-            }
-            appTools.sync();
-            return true;
-        }
-
-        @Override
-        protected void onPostExecute(Boolean aBoolean) {
-            super.onPostExecute(aBoolean);
-            if (isCancelled()) {
-                return;
-            }
-            MainActivity.this.appInfos.clear();
-            MainActivity.this.appInfos.addAll(appTools.getAppInfo(ApplicationInfoUtil.DEFAULT));
-            initRecycleView();
-            hideProgressDialog();
-        }
-    };
-
-    @Override
-    protected void onRestart() {
-        super.onRestart();
-        int currentColor = getCurrentColor();
-        int color = getSetting(THEME, currentColor);
-        if (currentColor != color) {
-            adjustAppColor(color, true);
-        }
-    }
+    private CheckBox showUninstall, showMyos, showLunch;
+    private AppInfoTask appInfoTask;
+    private LoadingDialog loadingDialog;
+    private static final String TAG = "MainActivity";
 
     public void showAsPopWindow() {
         if (popupWindow == null || popupWindowView == null) {
@@ -97,29 +69,23 @@ public class MainActivity extends BaseActivity implements SearchView.OnQueryText
             popupWindow.setTouchable(true);
             popupWindow.setBackgroundDrawable(new ColorDrawable());
             popupWindow.setAnimationStyle(R.style.PopupAnimation);
-            showSys = popupWindowView.findViewById(R.id.show_sys_app);
             showMyos = popupWindowView.findViewById(R.id.show_myos);
             showUninstall = popupWindowView.findViewById(R.id.show_uninstall);
             showLunch = popupWindowView.findViewById(R.id.show_launch);
-            showSys.setChecked(true);
             showMyos.setChecked(false);
-            showUninstall.setChecked(true);
+            showUninstall.setChecked(false);
             showLunch.setChecked(false);
-            showSys.setOnCheckedChangeListener(this);
             showMyos.setOnCheckedChangeListener(this);
             showUninstall.setOnCheckedChangeListener(this);
             showLunch.setOnCheckedChangeListener(this);
         }
         popupWindow.showAtLocation(popupWindowView, Gravity.TOP | Gravity.END, 0, toolbar.getMeasuredHeight());
         popupWindow.showAsDropDown(popupWindowView);
-
-
     }
 
     @Override
     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
         if (showLunch == buttonView
-                || showSys == buttonView
                 || buttonView == showUninstall
                 || buttonView == showMyos) {
             updateAppInfo();
@@ -140,12 +106,15 @@ public class MainActivity extends BaseActivity implements SearchView.OnQueryText
         if (bootTime == 0) {
             bootTime = System.currentTimeMillis();
         }
+        appInfoTask = AppInfoTask.getInstance();
+        appInfoTask.setListener(this);
+        appInfoTask.execute(this, true);
         appInfos = new ArrayList<>();
-        appTools = ApplicationInfoUtil.getIntance(this);
         setUpView();
     }
 
     private void initRecycleView() {
+        appInfoTask.onCreate(this);
         mCrimeRecyclerView = findViewById(R.id.crime_recycler_view);
         mCrimeRecyclerView.setEmptyView(findViewById(R.id.empty_view));
         mCrimeRecyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -174,11 +143,8 @@ public class MainActivity extends BaseActivity implements SearchView.OnQueryText
                 }
             }
             appLauchInfoDialog.setMessage(sb.toString());
-            appLauchInfoDialog.setButton("返回", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    appLauchInfoDialog.dismiss();
-                }
+            appLauchInfoDialog.setButton("返回", (DialogInterface dialog, int which) -> {
+                appLauchInfoDialog.dismiss();
             });
             appLauchInfoDialog.show();
         });
@@ -191,7 +157,6 @@ public class MainActivity extends BaseActivity implements SearchView.OnQueryText
             startActivity(intent);
             return true;
         });
-        appTools.registerReceiver(this, this);
     }
 
     private void showToast(String msg) {
@@ -226,24 +191,126 @@ public class MainActivity extends BaseActivity implements SearchView.OnQueryText
                     } else if (popupWindow.isShowing()) {
                         hidePopWindow();
                     }
-                } else if (item.getItemId() == R.id.menu_theme) {
-                    startActivity(new Intent(MainActivity.this, ThemeActivity.class));
-                } else if (item.getItemId() == R.id.menu_about) {
-                    startActivity(new Intent(MainActivity.this, AboutActivity.class));
                 } else if (item.getItemId() == R.id.menu_export) {
                     for (AppInfo appInfo : appInfos) {
-                        Log.i("appabout", "\n"+appInfo.toString());
-                        showToast("输入adb logcat -s appabout，打印");
+                        Log.i("appabout", "\n" + appInfo.toString());
+
+
+                    }
+                    if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+                        new ExportAsyncTask().execute(appInfos);
+                    } else {
+                        requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0x717);
+                    }
+
+
+                } else if (item.getItemId() == R.id.menu_update) {
+                    appInfoTask.execute(MainActivity.this, false);
+                    if (showUninstall != null) {
+                        showUninstall.setChecked(false);
+                    }
+                    if (showMyos != null) {
+                        showMyos.setChecked(false);
+                    }
+                    if (showLunch != null) {
+                        showLunch.setChecked(false);
                     }
                 }
-
-
                 return true;
             }
         });
-        adjustAppColor(getSetting(THEME, getColor(R.color.colorBackground)), false);
-        setSetting(THEME, getCurrentColor());
-        appTask.execute();
+        initRecycleView();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if(requestCode==0x717){
+            if(permissions[0].equals(Manifest.permission.WRITE_EXTERNAL_STORAGE) && grantResults[0]==PackageManager.PERMISSION_GRANTED){
+                new ExportAsyncTask().execute(appInfos);
+            }else{
+                showToast("Error:no premission");
+            }
+        }
+    }
+
+    private class ExportAsyncTask extends AsyncTask<List<AppInfo>, Integer, Boolean> {
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            showToast("正在导出");
+
+            if (loadingDialog == null) {
+                loadingDialog = new LoadingDialog(MainActivity.this);
+            }
+            loadingDialog.show();
+        }
+
+        @Override
+        protected Boolean doInBackground(List<AppInfo>... infos) {
+            if (infos.length != 1) {
+                return false;
+            }
+            Collections.sort(infos[0], new Comparator<AppInfo>() {
+                @Override
+                public int compare(AppInfo o1, AppInfo o2) {
+                    return o1.getAppDir().toString().compareTo(o2.getAppDir().toString());
+                }
+            });
+
+            File file = new File("/sdcard/DCIM/appinfos.txt");
+            BufferedWriter bfw = null;
+            FileWriter fw = null;
+            try {
+                fw = new FileWriter(file, false);
+                bfw = new BufferedWriter(fw);
+
+                bfw.write((infos[0].size()) + " app have been install\n");
+                for (AppInfo appInfo : infos[0]) {
+                    bfw.write(appInfo.toString());
+                    bfw.write("\n");
+                }
+                //bfw.write();
+
+            } catch (IOException e) {
+                e.printStackTrace();
+                return false;
+            } finally {
+                try {
+                    if (bfw != null) {
+                        bfw.flush();
+                        bfw.close();
+                    }
+                    if (fw != null) {
+                        fw.close();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        @Override
+        protected void onProgressUpdate(Integer... values) {
+            super.onProgressUpdate(values);
+        }
+
+        @Override
+        protected void onPostExecute(Boolean siSucceed) {
+            super.onPostExecute(siSucceed);
+            if(siSucceed){
+                showToast("成功导出:/sdcard/DCIM/appinfos.txt");
+            }else{
+                showToast("导出失败");
+            }
+            if (loadingDialog != null) {
+                loadingDialog.hide();
+            }
+        }
     }
 
     @Override
@@ -254,7 +321,7 @@ public class MainActivity extends BaseActivity implements SearchView.OnQueryText
     @Override
     public boolean onQueryTextChange(String s) {
         if (appInfos != null && appInfos.size() > 0) {
-            appTools.search(appInfos, s);
+            appInfoTask.search(appInfos, s);
             if (mAdapter != null) {
                 mAdapter.notifyDataSetChanged();
             }
@@ -265,84 +332,63 @@ public class MainActivity extends BaseActivity implements SearchView.OnQueryText
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        appTools.unregisterReceiver();
-        appTask.cancel(true);
-        if (loadingDialog != null) {
-            loadingDialog.dismiss();
-        }
+        appInfoTask.onDestory();
     }
 
-    public void showProgressDialog() {
-        if (loadingDialog == null) {
-            loadingDialog = new LoadingDialog(this);
-            loadingDialog.setCanceledOnTouchOutside(false);
-        }
-        loadingDialog.show();
-    }
-
-    public void hideProgressDialog() {
-        if (loadingDialog != null) {
-            loadingDialog.hide();
-        }
-    }
 
     private void updateAppInfo() {
         if (appInfos == null
                 || mAdapter == null
-                || appTools == null
                 || showLunch == null
-                || showUninstall == null
-                || showSys == null) {
+                || showUninstall == null) {
             return;
         }
-        appInfos.clear();
-        if (showSys.isChecked()) {
-            appInfos.addAll(appTools.getAppInfo(ApplicationInfoUtil.SYSTEM_APP));
-        }
+
+        int type = 0;
         if (showUninstall.isChecked()) {
-            appInfos.addAll(appTools.getAppInfo(ApplicationInfoUtil.NONSYSTEM_APP));
+            type = type | ApplicationInfoUtil.UNINSTALL;
+        }
+        if (showLunch.isChecked()) {
+            type = type | ApplicationInfoUtil.LAUNCH_APP;
         }
         if (showMyos.isChecked()) {
-            Iterator<AppInfo> allinfo = appInfos.iterator();
-            AppInfo info;
-            while (allinfo.hasNext()) {
-                info = allinfo.next();
-                if (!info.getAppDir().toString().toLowerCase().contains("/ape")) {
-                    allinfo.remove();
-                }
-            }
+            type = type | ApplicationInfoUtil.MYOS_APP;
         }
+        appInfoTask.getAppInfo(type);
 
-        if (showLunch.isChecked()) {
-            Iterator<AppInfo> allinfo = appInfos.iterator();
-            AppInfo info;
-            while (allinfo.hasNext()) {
-                info = allinfo.next();
-                if (info.getLauncherlist().size() == 0) {
-                    allinfo.remove();
-                }
-            }
+    }
+
+
+    @Override
+    public void preDone() {
+        Log.i(TAG, "update start");
+        if (loadingDialog == null) {
+            loadingDialog = new LoadingDialog(MainActivity.this);
         }
+        loadingDialog.show();
+    }
 
+    @Override
+    public void done(List<AppInfo> appInfos) {
+        Log.i(TAG, "update done");
+        this.appInfos.clear();
+        this.appInfos.addAll(appInfos);
         mAdapter.notifyDataSetChanged();
-    }
-
-    @Override
-    public void installapp(AppInfo appInfo) {
-        updateAppInfo();
-    }
-
-    @Override
-    public void unstallapp(AppInfo appInfo) {
-        updateAppInfo();
-    }
-
-    @Override
-    protected void colorChange(int color) {
-        super.colorChange(color);
-        if (toolbar != null) {
-            // toolbar.setBackgroundColor(color);
+        if (loadingDialog != null) {
+            loadingDialog.hide();
         }
+
+    }
+
+    @Override
+    public void appChange() {
+        Log.i(TAG, "app change");
+        showToast("有应用已经被安装或卸载，注意更新一下");
+    }
+
+    @Override
+    public void updateFail() {
+        showToast("正在更新，稍后再试");
     }
 }
 
