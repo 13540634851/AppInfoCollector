@@ -11,7 +11,9 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.preference.PreferenceFragment;
 import android.support.annotation.NonNull;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.SearchView;
@@ -34,6 +36,7 @@ import com.tinno.android.appinfocollector.model.ApplicationInfoUtil;
 import com.tinno.android.appinfocollector.presenter.AppAdapter;
 import com.tinno.android.appinfocollector.presenter.AppInfoTask;
 import com.tinno.android.appinfocollector.presenter.AppRecyclerView;
+import com.tinno.android.appinfocollector.tools.SystemPropertiesUtils;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -60,6 +63,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     private AppInfoTask appInfoTask;
     private LoadingDialog loadingDialog;
     private static final String TAG = "MainActivity";
+    private boolean immediateLoad = false;
 
     public void showAsPopWindow() {
         if (popupWindow == null || popupWindowView == null) {
@@ -102,6 +106,18 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        Intent intent = getIntent();
+        String cmd = intent.getStringExtra("cmd");
+        Log.i(TAG,"cmd = "+cmd);
+        if (cmd != null) {
+            if ("immediateload".equals(cmd)) {
+                immediateLoad = true;
+            } else if ("compare".equals(cmd)) {
+                //nothing to do
+            }
+        }
+
         setContentView(R.layout.activity_main);
         if (bootTime == 0) {
             bootTime = System.currentTimeMillis();
@@ -225,10 +241,10 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if(requestCode==0x717){
-            if(permissions[0].equals(Manifest.permission.WRITE_EXTERNAL_STORAGE) && grantResults[0]==PackageManager.PERMISSION_GRANTED){
+        if (requestCode == 0x717) {
+            if (permissions[0].equals(Manifest.permission.WRITE_EXTERNAL_STORAGE) && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 new ExportAsyncTask().execute(appInfos);
-            }else{
+            } else {
                 showToast("Error:no premission");
             }
         }
@@ -239,8 +255,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-            showToast("正在导出");
-
             if (loadingDialog == null) {
                 loadingDialog = new LoadingDialog(MainActivity.this);
             }
@@ -267,6 +281,9 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                 bfw = new BufferedWriter(fw);
 
                 bfw.write((infos[0].size()) + " app have been install\n");
+                bfw.write("serial number:" + SystemPropertiesUtils.get("ro.serialno", "unknown"));
+                Log.i(TAG,"serial number: "+SystemPropertiesUtils.get("ro.serialno", "unknown"));
+                bfw.write("\n");
                 for (AppInfo appInfo : infos[0]) {
                     bfw.write(appInfo.toString());
                     bfw.write("\n");
@@ -302,10 +319,17 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         @Override
         protected void onPostExecute(Boolean siSucceed) {
             super.onPostExecute(siSucceed);
-            if(siSucceed){
-                showToast("成功导出:/sdcard/DCIM/appinfos.txt");
-            }else{
-                showToast("导出失败");
+            if (siSucceed) {
+                new AlertDialog.Builder(MainActivity.this)
+                        .setTitle("命令:导出")
+                        .setMessage("成功导出:/sdcard/DCIM/appinfos.txt")
+                        .create().show();
+
+            } else {
+                new AlertDialog.Builder(MainActivity.this)
+                        .setTitle("命令:导出")
+                        .setMessage("导出失败")
+                        .create().show();
             }
             if (loadingDialog != null) {
                 loadingDialog.hide();
@@ -377,7 +401,14 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         if (loadingDialog != null) {
             loadingDialog.hide();
         }
-
+        if (immediateLoad) {
+            immediateLoad = false;
+            if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+                new ExportAsyncTask().execute(appInfos);
+            } else {
+                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0x717);
+            }
+        }
     }
 
     @Override
@@ -386,9 +417,13 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         showToast("有应用已经被安装或卸载，注意更新一下");
     }
 
+
+
     @Override
     public void updateFail() {
         showToast("正在更新，稍后再试");
     }
 }
+
+
 
