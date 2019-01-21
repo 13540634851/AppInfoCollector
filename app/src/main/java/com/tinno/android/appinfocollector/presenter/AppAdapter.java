@@ -94,12 +94,16 @@ class AppHolder extends RecyclerView.ViewHolder implements View.OnClickListener,
 
     public void bindCrime(AppInfo appinfo) {
         mAppInfo = appinfo;
+        CharSequence appName = mAppInfo.getAppName();
+        CharSequence pkgName = mAppInfo.getPackageName();
+        CharSequence apkDir = mAppInfo.getAppDir();
+        CharSequence verName = mAppInfo.getVersionName();
         mAppIcon.setImageDrawable(mAppInfo.getAppIcon());
-        mAppName.setText(mAppInfo.getAppName());
-        mPkgName.setText(mAppInfo.getPackageName());
-        mAppDir.setText(mAppInfo.getAppDir());
+        mAppName.setText(appName == null ? "NULL" : appName);
+        mPkgName.setText(pkgName == null ? "NULL" : pkgName);
+        mAppDir.setText(apkDir == null ? "NULL" : apkDir);
         SpannableStringBuilder spannableStringBuilder = new SpannableStringBuilder();
-        spannableStringBuilder.append(mAppInfo.getVersionName());
+        spannableStringBuilder.append(verName == null ? "NULL" : verName);
         spannableStringBuilder.append("[" + mAppInfo.getVersionCode() + "]");
         mAppVer.setText(spannableStringBuilder);
     }
@@ -113,7 +117,7 @@ class AppHolder extends RecyclerView.ViewHolder implements View.OnClickListener,
 
     @Override
     public void onClick(View v) {
-        Log.i("wangcan","onItemClickListener not null?"+(onItemClickListener!=null));
+        Log.i("wangcan", "onItemClickListener not null?" + (onItemClickListener != null));
         if (onItemClickListener != null) {
             onItemClickListener.onItemClick(v, getAdapterPosition());
         }
@@ -122,7 +126,7 @@ class AppHolder extends RecyclerView.ViewHolder implements View.OnClickListener,
 
     @Override
     public boolean onLongClick(View v) {
-        Log.i("wangcan","onItemLongClickListener not null?"+(onItemLongClickListener!=null));
+        Log.i("wangcan", "onItemLongClickListener not null?" + (onItemLongClickListener != null));
         boolean result = false;
         if (onItemLongClickListener != null) {
             result = onItemLongClickListener.onItemLongClick(v, getAdapterPosition());

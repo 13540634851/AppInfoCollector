@@ -18,10 +18,10 @@ public class AppInfo {
     private CharSequence appDir;
 
     public void cleanHight() {
-        setAppName(appName.toString());
-        setPackageName(packageName.toString());
-        setVersionName(versionName.toString());
-        setAppDir(appDir.toString());
+        setAppName(getAppName().toString());
+        setPackageName(getPackageName().toString());
+        setVersionName(getVersionName().toString());
+        setAppDir(getAppDir().toString());
     }
 
     public void addLauncher(String luncher) {
@@ -70,6 +70,9 @@ public class AppInfo {
     }
 
     public CharSequence getAppDir() {
+        if(appDir==null){
+            return "NULL";
+        }
         return appDir;
     }
 
@@ -82,14 +85,23 @@ public class AppInfo {
     }
 
     public CharSequence getAppName() {
+        if(appName==null){
+            return "NULL";
+        }
         return appName;
     }
 
     public CharSequence getPackageName() {
+        if(packageName==null){
+            return "NULL";
+        }
         return packageName;
     }
 
     public CharSequence getVersionName() {
+        if(versionName==null){
+            return "NULL";
+        }
         return versionName;
     }
 

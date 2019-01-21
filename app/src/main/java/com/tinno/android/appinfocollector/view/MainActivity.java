@@ -9,11 +9,8 @@ import android.content.pm.PackageManager;
 import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
-import android.preference.PreferenceFragment;
 import android.support.annotation.NonNull;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.SearchView;
@@ -23,6 +20,8 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.LinearLayout;
@@ -106,10 +105,14 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        //show when power up;
+        final Window win = getWindow();
+        final WindowManager.LayoutParams params = win.getAttributes();
+        params.flags |= WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+                | WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD;
         Intent intent = getIntent();
         String cmd = intent.getStringExtra("cmd");
-        Log.i(TAG,"cmd = "+cmd);
+        Log.i(TAG, "cmd = " + cmd);
         if (cmd != null) {
             if ("immediateload".equals(cmd)) {
                 immediateLoad = true;
@@ -251,7 +254,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     }
 
     private class ExportAsyncTask extends AsyncTask<List<AppInfo>, Integer, Boolean> {
-
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
@@ -273,6 +275,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                 }
             });
 
+
             File file = new File("/sdcard/DCIM/appinfos.txt");
             BufferedWriter bfw = null;
             FileWriter fw = null;
@@ -281,15 +284,14 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                 bfw = new BufferedWriter(fw);
 
                 bfw.write((infos[0].size()) + " app have been install\n");
-                bfw.write("serial number:" + SystemPropertiesUtils.get("ro.serialno", "unknown"));
-                Log.i(TAG,"serial number: "+SystemPropertiesUtils.get("ro.serialno", "unknown"));
+                bfw.write("Version:" + SystemPropertiesUtils.get("ro.internal.build.version", "unknown"));
+
                 bfw.write("\n");
                 for (AppInfo appInfo : infos[0]) {
                     bfw.write(appInfo.toString());
                     bfw.write("\n");
                 }
                 //bfw.write();
-
             } catch (IOException e) {
                 e.printStackTrace();
                 return false;
@@ -319,16 +321,17 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         @Override
         protected void onPostExecute(Boolean siSucceed) {
             super.onPostExecute(siSucceed);
+            String title = "命令:导出";
             if (siSucceed) {
                 new AlertDialog.Builder(MainActivity.this)
-                        .setTitle("命令:导出")
-                        .setMessage("成功导出:/sdcard/DCIM/appinfos.txt")
+                        .setTitle(title)
+                        .setMessage(SystemPropertiesUtils.get("ro.internal.build.version", "") + "\n成功导出:/sdcard/DCIM/appinfos.txt")
                         .create().show();
 
             } else {
                 new AlertDialog.Builder(MainActivity.this)
-                        .setTitle("命令:导出")
-                        .setMessage("导出失败")
+                        .setTitle(title)
+                        .setMessage(SystemPropertiesUtils.get("ro.internal.build.version", "") + "\n导出失败")
                         .create().show();
             }
             if (loadingDialog != null) {
@@ -388,6 +391,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         Log.i(TAG, "update start");
         if (loadingDialog == null) {
             loadingDialog = new LoadingDialog(MainActivity.this);
+            loadingDialog.setCancelable(false);
         }
         loadingDialog.show();
     }
@@ -416,7 +420,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         Log.i(TAG, "app change");
         showToast("有应用已经被安装或卸载，注意更新一下");
     }
-
 
 
     @Override

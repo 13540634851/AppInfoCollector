@@ -3,81 +3,88 @@ package com.tinno.android.appinfocollector.tools;
 import android.text.TextUtils;
 import android.util.Log;
 
-import java.lang.reflect.Method;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.HashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class SystemPropertiesUtils {
 
     private static final String TAG = "MainActivity";
+    private static HashMap<String, String> keyValMap;
 
-    private static Class<?> mClassType = null;
-    private static Method mGetMethod = null;
-    private static Method mGetIntMethod = null;
-    private static Method mGetBooleanMethod = null;
-
-
-    private static Class<?> getSystemPropertiesClass() throws ClassNotFoundException {
-        if (mClassType == null) {
-            mClassType = Class.forName("android.os.SystemProperties");
+    private static void loadSystemProperties() {
+        if (keyValMap == null) {
+            keyValMap = new HashMap<>(30);
         }
-        return mClassType;
+        try {
+            Process p = Runtime.getRuntime().exec("getprop");
+            p.waitFor();
+            BufferedReader stdInput = new BufferedReader(new InputStreamReader(
+                    p.getInputStream()));
+            String temp = "";
+            int keyStart, keyStop, valStart, valStop;
+            String key, val;
+            while ((temp = stdInput.readLine()) != null) {
+                //[sys.ylog.svc.ftrace]: [stopped]
+                if (!TextUtils.isEmpty(temp)) {
+                    keyStart = temp.indexOf("[") + 1;
+                    keyStop = temp.indexOf("]");
+                    valStart = temp.lastIndexOf("[") + 1;
+                    valStop = temp.lastIndexOf("]");
+                    key = temp.substring(keyStart, keyStop);
+                    val = temp.substring(valStart, valStop);
+                    keyValMap.put(key, val);
+                    Log.d("HHH", "key=" + key + " val=" + val);
+                }
+            }
+        } catch (InterruptedException e) {
+
+        } catch (IOException e) {
+
+        }
+
+
     }
 
-    private static Method getMethod() throws Exception {
-        if (mGetMethod == null) {
-            Class clazz = getSystemPropertiesClass();
-            mGetMethod = clazz.getDeclaredMethod("get", String.class);
-        }
-        return mGetMethod;
-    }
-
-    private static Method getIntMethod() throws Exception {
-        if (mGetIntMethod == null) {
-            Class clazz = getSystemPropertiesClass();
-            mGetIntMethod = clazz.getDeclaredMethod("getInt", String.class, int.class);
-        }
-        return mGetIntMethod;
-    }
-
-    private static Method getBooleanMethod() throws Exception {
-        if (mGetBooleanMethod == null) {
-            Class clazz = getSystemPropertiesClass();
-            mGetBooleanMethod = clazz.getDeclaredMethod("getBoolean", String.class, boolean.class);
-        }
-        return mGetBooleanMethod;
-    }
 
     public static String get(String key, String def) {
-        try {
-            String value = (String) getMethod().invoke(null, key);
-            Log.d(TAG, "val = "+value);
-            if (!TextUtils.isEmpty(value)) {
-                return value;
-            }
-        } catch (Exception e) {
-            Log.d(TAG, "Unable to read system properties");
+        if (keyValMap == null) {
+            loadSystemProperties();
         }
-
-        return def;
+        String ret = keyValMap.get(key);
+        return ret == null ? def : ret;
     }
 
     public static int getInt(String key, int def) {
-        int value = def;
-        try {
-            value = (int) getIntMethod().invoke(null, key, def);
-        } catch (Exception e) {
-            Log.d(TAG, "Unable to read system properties");
+        if (keyValMap == null) {
+            loadSystemProperties();
         }
-        return value;
+        String ret = keyValMap.get(key);
+        if (isNumeric(ret)) {
+            return Integer.valueOf(ret);
+        } else {
+            return def;
+        }
+    }
+
+    public static boolean isNumeric(String str) {
+        Pattern pattern = Pattern.compile("[0-9]*");
+        Matcher isNum = pattern.matcher(str);
+        if (!isNum.matches()) {
+            return false;
+        }
+        return true;
     }
 
 
     public static boolean getBoolean(String key, boolean def) {
-        boolean value = def;
-        try {
-            value = (Boolean) getBooleanMethod().invoke(null, key, def);
-        } catch (Exception e) {
-
+        if (keyValMap == null) {
+            loadSystemProperties();
         }
-        return value;
+        String ret = keyValMap.get(key);
+        return ret.equals("true");
     }
 }
