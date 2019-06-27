@@ -6,6 +6,7 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -35,7 +36,7 @@ import com.tinno.android.appinfocollector.model.ApplicationInfoUtil;
 import com.tinno.android.appinfocollector.presenter.AppAdapter;
 import com.tinno.android.appinfocollector.presenter.AppInfoTask;
 import com.tinno.android.appinfocollector.presenter.AppRecyclerView;
-import com.tinno.android.appinfocollector.tools.SystemPropertiesUtils;
+
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -82,6 +83,9 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             showUninstall.setOnCheckedChangeListener(this);
             showLunch.setOnCheckedChangeListener(this);
         }
+
+        View view =new View(this);
+        view.setBackgroundColor(android.graphics.Color.GREEN);
         popupWindow.showAtLocation(popupWindowView, Gravity.TOP | Gravity.END, 0, toolbar.getMeasuredHeight());
         popupWindow.showAsDropDown(popupWindowView);
     }
@@ -193,7 +197,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         toolbar = findViewById(R.id.toolbar);
         toolbar.inflateMenu(R.menu.toobar_item);
         searchView = toolbar.findViewById(R.id.action_search_kl);
-        toolbar.setNavigationIcon(R.mipmap.ic_launcher);
+        toolbar.setNavigationIcon(R.drawable.ic_launcher);
         toolbar.setNavigationOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -234,6 +238,8 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                     if (showLunch != null) {
                         showLunch.setChecked(false);
                     }
+                } else if (item.getItemId() == R.id.menu_about) {
+//                    startActivity(new Intent(MainActivity.this, PropertiesActivity.class));
                 }
                 return true;
             }
@@ -284,7 +290,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                 bfw = new BufferedWriter(fw);
 
                 bfw.write((infos[0].size()) + " app have been install\n");
-                bfw.write("Version:" + SystemPropertiesUtils.get("ro.internal.build.version", "unknown"));
+//                bfw.write("Version:" + SystemPropertiesUtils.get("ro.internal.build.version", "unknown"));
 
                 bfw.write("\n");
                 for (AppInfo appInfo : infos[0]) {
@@ -325,13 +331,13 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             if (siSucceed) {
                 new AlertDialog.Builder(MainActivity.this)
                         .setTitle(title)
-                        .setMessage(SystemPropertiesUtils.get("ro.internal.build.version", "") + "\n成功导出:/sdcard/DCIM/appinfos.txt")
+                        .setMessage( "\n成功导出:/sdcard/DCIM/appinfos.txt")
                         .create().show();
 
             } else {
                 new AlertDialog.Builder(MainActivity.this)
                         .setTitle(title)
-                        .setMessage(SystemPropertiesUtils.get("ro.internal.build.version", "") + "\n导出失败")
+                        .setMessage("\n导出失败")
                         .create().show();
             }
             if (loadingDialog != null) {

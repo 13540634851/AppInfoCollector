@@ -8,6 +8,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Color;
+import android.media.MediaRecorder;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.style.ForegroundColorSpan;
@@ -68,6 +69,16 @@ public class ApplicationInfoUtil {
         } catch (JSONException e) {
             e.printStackTrace();
         }
+    }
+
+    public void test() {
+        CharSequence spn = "123";
+        if ("JAZZ-Warid".equals(spn.toString())) {
+            spn = "Warid";
+        }
+        String fpsSet = "20";
+        MediaRecorder mMediaRecorder =null;
+
     }
 
     public boolean getCache() {
