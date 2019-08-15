@@ -197,7 +197,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         toolbar = findViewById(R.id.toolbar);
         toolbar.inflateMenu(R.menu.toobar_item);
         searchView = toolbar.findViewById(R.id.action_search_kl);
-        toolbar.setNavigationIcon(R.drawable.ic_launcher);
+        toolbar.setNavigationIcon(R.drawable.back);
         toolbar.setNavigationOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

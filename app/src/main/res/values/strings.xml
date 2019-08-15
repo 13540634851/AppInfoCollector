@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">AppInfoCollector</string>
+    <string name="app_name">应用管理</string>
     <string name="app_search">App Search</string>
     <string name="action_search_knowledge">AppInfoCollector</string>
     <string name="version_name">1.1</string>

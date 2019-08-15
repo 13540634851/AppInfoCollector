@@ -14,6 +14,8 @@ import android.text.SpannableString;
 import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 
+import com.tinno.android.appinfocollector.view.MyLog;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 
@@ -39,7 +41,7 @@ public class ApplicationInfoUtil {
     public static final int MYOS_APP = UNINSTALL << 1; // myos应用
     public static final int LAUNCH_APP = UNINSTALL << 2; // launch应用
 
-
+    private AppDataBase appDataBase;
     private static ApplicationInfoUtil intance;
     private Context context;
     private List<AppInfo> sysApplist, nonsysApplist;
@@ -57,42 +59,34 @@ public class ApplicationInfoUtil {
         this.context = context;
         sysApplist = new ArrayList<>();
         nonsysApplist = new ArrayList<>();
+        appDataBase = AppDataBase.getInstance(context);
     }
 
     public void setCache() {
-        SharedPreferences preferences = context.getSharedPreferences("app_cache", Context.MODE_PRIVATE);
-        JSONArray arry = new JSONArray();
-        try {
-            arry.put(0, sysApplist);
-            arry.put(1, nonsysApplist);
-            preferences.edit().putString("apps", arry.toString());
-        } catch (JSONException e) {
-            e.printStackTrace();
+        for (AppInfo appInfo : sysApplist) {
+            appDataBase.saveAppinfo(appInfo, true);
+        }
+        for (AppInfo appInfo : nonsysApplist) {
+            appDataBase.saveAppinfo(appInfo, false);
         }
     }
 
-    public void test() {
-        CharSequence spn = "123";
-        if ("JAZZ-Warid".equals(spn.toString())) {
-            spn = "Warid";
-        }
-        String fpsSet = "20";
-        MediaRecorder mMediaRecorder =null;
-
-    }
 
     public boolean getCache() {
-        SharedPreferences preferences = context.getSharedPreferences("app_cache", Context.MODE_PRIVATE);
-        try {
-            JSONArray array = new JSONArray(preferences.getString("apps", "null"));
-            sysApplist = (List<AppInfo>) array.get(0);
-            nonsysApplist = (List<AppInfo>) array.get(1);
-            if (sysApplist != null && sysApplist.size() > 0) {
-                return true;
-            }
-        } catch (JSONException e) {
-            e.printStackTrace();
+        List<AppInfo> sysApps = appDataBase.loadAppinfos(true);
+        if (sysApps != null) {
+            sysApplist.clear();
+            sysApplist.addAll(sysApps);
         }
+
+        List<AppInfo> nosysApps = appDataBase.loadAppinfos(false);
+        if (nosysApps != null) {
+            nonsysApplist.clear();
+            nonsysApplist.addAll(nosysApps);
+        }
+
+        MyLog.i("sysApplist :" + sysApplist.size());
+        MyLog.i("nonsysApplist :" + nonsysApplist.size());
         return false;
     }
 
@@ -101,6 +95,12 @@ public class ApplicationInfoUtil {
         if (!cacheFirst) {
             sysApplist.clear();
             nonsysApplist.clear();
+        } else {
+            boolean isOk = getCache();
+            MyLog.i("get databae " + isOk);
+            if (isOk) {
+                return;
+            }
         }
         if (sysApplist != null && sysApplist.size() > 0) {
             return;
@@ -129,7 +129,7 @@ public class ApplicationInfoUtil {
                 nonsysApplist.add(tmpInfo);
             }
         }
-        //setCache();
+        setCache();
     }
 
     public AppInfo getAppInfoByPackageName(String packageName) {
@@ -285,6 +285,7 @@ public class ApplicationInfoUtil {
     private List<String> getLaunchActivities(Context context, String packageName) {
         Intent localIntent = new Intent("android.intent.action.MAIN", null);
         localIntent.addCategory("android.intent.category.LAUNCHER");
+        localIntent.addCategory("android.intent.category.DEFAULT");
         List<ResolveInfo> appList = context.getPackageManager().queryIntentActivities(localIntent, 0);
         List<String> activitys = new ArrayList<>();
         for (int i = 0; i < appList.size(); i++) {

@@ -140,7 +140,4 @@ public class AppInfoTask {
             loadListener.done(applicationInfoUtil.getAppInfo(type));
         }
     }
-    public void save(){
-
-    }
 }
