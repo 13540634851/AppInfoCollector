@@ -23,7 +23,7 @@ public class AppDataBase extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "AppInfo.db";
     private static final String TB_NAME = "appinfo";
     private static final int DATABASE_VERSION = 1;
-    private static final String SQL = "creatToaste table " + TB_NAME + " ( " +
+    private static final String SQL = "creat table " + TB_NAME + " ( " +
             "isSystem INTEGER," +
             "appname TEXT," +
             "packageName TEXT," +
