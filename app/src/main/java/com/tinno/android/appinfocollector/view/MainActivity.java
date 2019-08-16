@@ -11,6 +11,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.UserHandle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -84,7 +85,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             showLunch.setOnCheckedChangeListener(this);
         }
 
-        View view =new View(this);
+        View view = new View(this);
         view.setBackgroundColor(android.graphics.Color.GREEN);
         popupWindow.showAtLocation(popupWindowView, Gravity.TOP | Gravity.END, 0, toolbar.getMeasuredHeight());
         popupWindow.showAsDropDown(popupWindowView);
@@ -197,7 +198,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         toolbar = findViewById(R.id.toolbar);
         toolbar.inflateMenu(R.menu.toobar_item);
         searchView = toolbar.findViewById(R.id.action_search_kl);
-        toolbar.setNavigationIcon(R.drawable.back);
+        toolbar.setNavigationIcon(R.drawable.top);
         toolbar.setNavigationOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -238,8 +239,9 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                     if (showLunch != null) {
                         showLunch.setChecked(false);
                     }
-                } else if (item.getItemId() == R.id.menu_about) {
-//                    startActivity(new Intent(MainActivity.this, PropertiesActivity.class));
+                } else if (item.getItemId() == R.id.menu_clear) {
+                    appInfoTask.clearCache();
+                    appInfoTask.execute(MainActivity.this, false);
                 }
                 return true;
             }
@@ -331,7 +333,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             if (siSucceed) {
                 new AlertDialog.Builder(MainActivity.this)
                         .setTitle(title)
-                        .setMessage( "\n成功导出:/sdcard/DCIM/appinfos.txt")
+                        .setMessage("\n成功导出:/sdcard/DCIM/appinfos.txt")
                         .create().show();
 
             } else {
@@ -419,6 +421,8 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                 requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0x717);
             }
         }
+
+
     }
 
     @Override

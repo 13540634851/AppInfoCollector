@@ -71,6 +71,10 @@ public class ApplicationInfoUtil {
         }
     }
 
+    public boolean clearCache() {
+        return appDataBase.clearCache();
+    }
+
 
     public boolean getCache() {
         List<AppInfo> sysApps = appDataBase.loadAppinfos(true);

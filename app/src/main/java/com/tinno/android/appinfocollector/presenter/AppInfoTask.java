@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
@@ -11,6 +12,7 @@ import android.os.Message;
 
 import com.tinno.android.appinfocollector.model.AppInfo;
 import com.tinno.android.appinfocollector.model.ApplicationInfoUtil;
+import com.tinno.android.appinfocollector.model.WorkTask;
 
 import java.util.List;
 
@@ -32,6 +34,8 @@ public class AppInfoTask {
     private ApplicationInfoUtil applicationInfoUtil;
     private static final int UPDATE_APP = 0x777;
 
+//    private WorkTask workTask;
+
     private AppInfoTask() {
         handlerThread = new HandlerThread("app_task");
         handlerThread.start();
@@ -40,7 +44,7 @@ public class AppInfoTask {
             public void handleMessage(Message msg) {
                 super.handleMessage(msg);
                 if (msg.what == UPDATE_APP) {
-                    boolean cacheF = msg.arg1==0;
+                    boolean cacheF = msg.arg1 == 0;
                     if (applicationInfoUtil != null) {
                         applicationInfoUtil.sync(cacheF);
                     }
@@ -60,6 +64,29 @@ public class AppInfoTask {
                 }
             }
         };
+
+
+//        workTask = WorkTask.getInstance();
+//        workTask.setListitenr(new WorkTask.WorkCallback() {
+//            @Override
+//            public Object doInbackground(int workID, Object object) {
+//                if (workID == UPDATE_APP) {
+//                    boolean cacheF = (boolean) object;
+//                    if (applicationInfoUtil != null) {
+//                        applicationInfoUtil.sync(cacheF);
+//                    }
+//                }
+//                return true;
+//            }
+//
+//            @Override
+//            public void postResult(int workID, Object result) {
+//                isUpdate = false;
+//                if (loadListener != null && applicationInfoUtil != null) {
+//                    loadListener.done(applicationInfoUtil.getAppInfo(ApplicationInfoUtil.ALL));
+//                }
+//            }
+//        });
     }
 
     private static class SingletonHandle {
@@ -76,7 +103,11 @@ public class AppInfoTask {
 
     private boolean isUpdate = false;
 
-    public void execute(Context context,boolean cacheFirst) {
+    public boolean clearCache() {
+        return applicationInfoUtil.clearCache();
+    }
+
+    public void execute(Context context, boolean cacheFirst) {
         if (isUpdate) {
             if (loadListener != null) {
                 loadListener.updateFail();
@@ -90,8 +121,11 @@ public class AppInfoTask {
         if (applicationInfoUtil == null) {
             applicationInfoUtil = ApplicationInfoUtil.getIntance(context);
         }
-        Message message=workHandler.obtainMessage(UPDATE_APP);
-        message.arg1=(cacheFirst?0:1);
+
+//        workTask.startWork(UPDATE_APP,cacheFirst);
+
+        Message message = workHandler.obtainMessage(UPDATE_APP);
+        message.arg1 = (cacheFirst ? 0 : 1);
         workHandler.sendMessage(message);
     }
 

@@ -18,8 +18,8 @@
         app:showAsAction="never" />
 
     <item
-        android:id="@+id/menu_about"
-        android:title="手机信息"
+        android:id="@+id/menu_clear"
+        android:title="清理缓存"
         android:orderInCategory="4"
         app:showAsAction="never" />
 

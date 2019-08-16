@@ -23,7 +23,7 @@ public class AppDataBase extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "AppInfo.db";
     private static final String TB_NAME = "appinfo";
     private static final int DATABASE_VERSION = 1;
-    private static final String SQL = "create table " + TB_NAME + " ( " +
+    private static final String SQL = "creatToaste table " + TB_NAME + " ( " +
             "isSystem INTEGER," +
             "appname TEXT," +
             "packageName TEXT," +
@@ -84,6 +84,58 @@ public class AppDataBase extends SQLiteOpenHelper {
         String[] listEntry = str.split(",");
         List<String> resultList = new ArrayList<>(Arrays.asList(listEntry));
         return resultList;
+    }
+
+
+    private synchronized byte[] drawableToByte(Drawable drawable) {
+        if (drawable == null) {
+            return null;
+        }
+        Bitmap bitmap = Bitmap
+                .createBitmap(
+                        drawable.getIntrinsicWidth(),
+                        drawable.getIntrinsicHeight(),
+                        drawable.getOpacity() != PixelFormat.OPAQUE ? Bitmap.Config.ARGB_8888
+                                : Bitmap.Config.RGB_565);
+
+        Canvas canvas = new Canvas(bitmap);
+        drawable.setBounds(0, 0, drawable.getIntrinsicWidth(),
+                drawable.getIntrinsicHeight());
+        drawable.draw(canvas);
+        int size = bitmap.getWidth() * bitmap.getHeight() * 4;
+        // 创建一个字节数组输出流,流的大小为size
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(size);
+        // 设置位图的压缩格式，质量为100%，并放入字节数组输出流中
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos);
+        // 将字节数组输出流转化为字节数组byte[]
+        byte[] imagedata = baos.toByteArray();
+        return imagedata;
+    }
+
+    private synchronized Drawable byteToDrawable(byte[] img) {
+        Bitmap bitmap;
+        if (img != null) {
+            bitmap = BitmapFactory.decodeByteArray(img, 0, img.length);
+            Drawable drawable = new BitmapDrawable(bitmap);
+            return drawable;
+        }
+        return null;
+    }
+
+
+    public boolean clearCache() {
+        int count = sqLiteDatabase.delete(TB_NAME, null, null);
+        return count != 0;
+    }
+
+    public boolean deleteAppinfo(AppInfo appInfo) {
+        return deleteAppinfo(appInfo.getPackageName().toString());
+    }
+
+    public boolean deleteAppinfo(String packagename) {
+        int count = sqLiteDatabase.delete(TB_NAME, "packageName=?",
+                new String[]{packagename});
+        return count != 0;
     }
 
     public List<AppInfo> loadAppinfos(boolean isASystem) {
@@ -159,42 +211,6 @@ public class AppDataBase extends SQLiteOpenHelper {
 
 
         return result != 0;
-    }
-
-
-    public synchronized byte[] drawableToByte(Drawable drawable) {
-        if (drawable == null) {
-            return null;
-        }
-        Bitmap bitmap = Bitmap
-                .createBitmap(
-                        drawable.getIntrinsicWidth(),
-                        drawable.getIntrinsicHeight(),
-                        drawable.getOpacity() != PixelFormat.OPAQUE ? Bitmap.Config.ARGB_8888
-                                : Bitmap.Config.RGB_565);
-
-        Canvas canvas = new Canvas(bitmap);
-        drawable.setBounds(0, 0, drawable.getIntrinsicWidth(),
-                drawable.getIntrinsicHeight());
-        drawable.draw(canvas);
-        int size = bitmap.getWidth() * bitmap.getHeight() * 4;
-        // 创建一个字节数组输出流,流的大小为size
-        ByteArrayOutputStream baos = new ByteArrayOutputStream(size);
-        // 设置位图的压缩格式，质量为100%，并放入字节数组输出流中
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos);
-        // 将字节数组输出流转化为字节数组byte[]
-        byte[] imagedata = baos.toByteArray();
-        return imagedata;
-    }
-
-    public synchronized Drawable byteToDrawable(byte[] img) {
-        Bitmap bitmap;
-        if (img != null) {
-            bitmap = BitmapFactory.decodeByteArray(img, 0, img.length);
-            Drawable drawable = new BitmapDrawable(bitmap);
-            return drawable;
-        }
-        return null;
     }
 
 
